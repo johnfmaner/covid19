@@ -6,6 +6,10 @@ This project is a self learning experiment with time series forecasting models i
 
 DISCLAIMER: I am by no means an epidemiologist. This work in no way claims to account for easing of stay-at-home mandates, social distancing, mask usage, and other factors. 
 
+**Clone this repository:**
+
+`git clone https://github.com/johnfmaner/covid19`
+
 ## Contents 
 
 ### /owid_covid
