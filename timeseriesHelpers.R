@@ -11,8 +11,8 @@ download.owid <- function(download.dir, file.name) {
   "
   
   owid.url <- "https://covid.ourworldindata.org/data/owid-covid-data.csv"
- download.final <- paste(download.dir, file.name)
- download.file(owid.url, download.final)
+  download.final <- paste(download.dir, file.name)
+  download.file(owid.url, download.final)
 }
 
 date.day <- function(date) {
@@ -21,7 +21,7 @@ date.day <- function(date) {
   (date, date) lubridate ymd('YYYY-MM-DD') object
   "
   
-  as.integer(strftime(date, format="%j"))
+  return(as.integer(strftime(date, format="%j")))
 }
 
 myCountry <- function(source, loc) {
@@ -35,7 +35,7 @@ myCountry <- function(source, loc) {
   loc <- tolower(loc) #convert location to lowercase for ease of use
   
   if (is.na(match(loc, tolower(myLocations))) == FALSE){
-    subset(source, tolower(location) == loc)
+    return(subset(source, tolower(location) == loc))
   }
   else {
     stop("Location is not a valid location. ")
@@ -55,7 +55,7 @@ myContinent <- function(source, loc) {
   loc <- tolower(loc) #convert location to lowercase for ease of use
   
   if (is.na(match(loc, tolower(myLocations))) == FALSE){
-    subset(source, tolower(continent) == loc)
+    return(subset(source, tolower(continent) == loc))
   }
   else {
     stop("Continent is not a valid location. ")
@@ -71,12 +71,28 @@ myTimeseries <- function(source, var, start, stop) {
   (stop, date) ymd('YYYY-MM-DD') lubrdiate object for stopping point of time series
   "
   
+  #available variables for time series forecasting
+  myVars<- c("total_cases","new_cases","total_deaths","new_deaths",
+             "total_cases_per_million","new_cases_per_million",
+             "total_deaths_per_million","new_deaths_per_million",
+             "total_tests","new_tests","total_tests_per_thousand",
+             "new_tests_per_thousand","new_tests_smoothed","new_tests_smoothed_per_thousand")
+
+  if(is.na(match(var, myVars)) == TRUE){
+    stop("Not a valid time series variable")
+  }
+  
   myStart = date.day(start)
   myEnd = date.day(stop)
   
-  ts(subset(source[var], source$date <= stop & source$date >= start), 
+  if (myStart > myEnd) {
+    message <- paste("Error in stop arg:",start,"occured before",stop,sep=" ")
+    stop(message)
+  }
+  
+  return(ts(subset(source[var], source$date <= stop & source$date >= start), 
      start=myStart, 
-     end=myEnd)
+     end=myEnd))
 }
 
 myForecast <- function(source, type, predInt, confLevels) {
@@ -107,25 +123,61 @@ myForecast <- function(source, type, predInt, confLevels) {
     funIndex <- match(type, myTypes)
     myFitfunction <- get(myFuns[funIndex])
     #output:
-    forecast(myFitfunction(source), h=predInt, level=confLevels)
+    return(forecast(myFitfunction(source), h=predInt, level=confLevels))
   }
   else{
     stop("Forecast type is not available. ")
   }
 }
 
-find.start<- function(source) {
+find.start<- function(source, var) {
   "
-  RETURNS: (, date) date of first case from owid-covid data (ideally from myCountry output)
-  (source, named list) output of myCountry or myContinent containing total_cases and date columns. 
+  RETURNS: (, date) date of first non zero value for a variable from owid-covid data (ideally from myCountry output)
+  (source, named list) output of myCountry or myContinent containing var and date columns. 
+  (var, string) variable to find first date of first non zero value. 
+  "
+
+  for (val in seq(1:length(source[[var]]))) {
+    default <-  ymd("2020-01-01") #default start value 
+    start.val<- default 
+    if (source[[var]][val] != 0 & is.na(source[[var]][val]) == FALSE) {
+      start.val <- ymd(source[["date"]][val])
+      return(start.val)
+      break 
+      } # else {
+    #   next
+    # }
+  }
+  #check if start.val occurs before Jan1 to avoid first value being 365
+  #this SHOULDN'T happen, it's just here as a contigency 
+  if (year(start.val) != "2020") {
+    print("Defaulted to 2020-01-01 because start did not occur in 2020")
+    return(default)
+  } else {
+    return(start.val)
+  }
+}
+
+var.name <- function(var) {
+  "
+  RETURNS: (,string) full name of variable, for use in generating titles and labels
+  (var, string) valid time series variable from myVars
   "
   
-  for (val in seq(1:length(source$total_cases))) {
-    if (source$total_cases[val] != 0) {
-      return(ymd(source$date[val]))
-      break
-    } else {
-      next
-    }
+  myVars<- c("total_cases","new_cases","total_deaths","new_deaths",
+             "total_cases_per_million","new_cases_per_million",
+             "total_deaths_per_million","new_deaths_per_million",
+             "total_tests","new_tests","total_tests_per_thousand",
+             "new_tests_per_thousand","new_tests_smoothed","new_tests_smoothed_per_thousand")
+  
+  myNames<- c("Total cases","Daily new cases","Total deaths","Daily new deaths","Total case / million",
+              "Daily new cases / million","Total deaths / million","Daily new deaths / million",
+              "Total tests","Daily new tests","Total tests / thousand","Daily new test / thousand",
+              "Daily new tests (smoothed)","Daily new tests (smoothed) / thousand")
+  
+  if(is.na(match(var, myVars)) == TRUE){
+    stop("Not a valid time series variable")
   }
+  
+  return(myNames[match(var, myVars)])
 }

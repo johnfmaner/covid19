@@ -1,5 +1,5 @@
 # WORKING DIR -----------------------------------------------------------
-myDir <- "~/Documents/projects/covid19/" #specify your directory
+myDir <- "~/Documents/projects/covid19/" #specify repository directory
 setwd(myDir)
 
 # DEPENDENCIES -----------------------------------------------------------
@@ -10,7 +10,7 @@ source("timeseriesHelpers.R") #load helper functions
 # LOAD DATA -----------------------------------------------------------
 
 ## **Downloading Data ===========================================================
-#download most recent owid-covid data - can also do this with bash script
+#download most recent owid-covid data - can also do this with download-owid.sh
 
 myData <- paste(myDir, "data/",sep="")
 myFile <- "owid-covid.csv"
@@ -22,17 +22,22 @@ dataIn <- read.csv(paste(myData, myFile, sep=""), header=TRUE)
 # DATA -----------------------------------------------------------
 
 ## **Country Data ===========================================================
-#load data and create subset data.frame of data for a country
-loc <- "Brazil"         #Eventually add ability to choose from unique(covid$location). 
-covid <- myCountry(dataIn, loc)
+#load data and create subset of data for a country
+loc <- "Brazil"         #Eventually add ability to choose from unique(dataIn$location). 
+loc.data <- myCountry(dataIn, loc)
 
 ## **Time Series ===========================================================
 #create subsets of time series data
+#variable with which to create time series 
+ts.var <- "new_cases"
+
+#useful dates 
 jan1 <- ymd("2020-01-01")     #Jan 1
-recent <- max(covid$date)      #Most recent day from owid-covid data
+recent <- max(loc.data$date)      #Most recent day from owid-covid data
 
-start0 <- find.start(covid)    #set to date in which first case was reported   
+start0 <- find.start(loc.data, ts.var)    #find date for first non zero value of ts.var    
 
+#subset for predictable periodic behavior of new cases in US
 start1 <- ymd("2020-05-05")   
 end1 <- ymd("2020-06-06")        
 
@@ -41,10 +46,11 @@ ts.end <- recent
 
 #TODO: add ts.start, ts.end as selectable fields (ideally from calendar or drop down in Shiny)
 #create time series of new_cases from ts.start to ts.end days. 
-data <- myTimeseries(covid, "new_cases", ts.start, ts.end)
+
+data <- myTimeseries(loc.data, ts.var, ts.start, ts.end)
 
 #create time series from jan1 to plot points 
-data0 <- myTimeseries(covid, "new_cases", jan1, recent)
+data0 <- myTimeseries(loc.data, ts.var, jan1, recent)
 
 #corresponding day of year for start of each month in 2020. 
 month.days = c(001,032,061,092,122,153,183,214,245,275,306,336)
@@ -53,7 +59,7 @@ month.names = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 # FORECASTING -----------------------------------------------------------
 
 pred.int = 30 #used for drawing plot windows and vertical lines 
-fore.type = "tbats"
+fore.type = "arima" #WARNING: TBATS not recommended for non periodic data (i.e total_)
 Fcast <- myForecast(source=data, type=fore.type, predInt=pred.int, confLevels=c(80,95))
 
 # PLOT -----------------------------------------------------------
@@ -72,12 +78,12 @@ plotTitle <- paste(loc, pred.int, "Day", toupper(fore.type), "Forecast", sep=" "
 plot(Fcast,
      main=plotTitle,
      sub="(data: Our World in Data Coronavirus Source Data)",
-#     xlab="Time",
-     ylab="Daily new cases",
+     #     xlab="Time",
+     ylab=var.name(ts.var),
      xlim=c(date.day(ts.start), date.day(ts.end) + pred.int),
      shadecols = c("grey80", "grey70"), #color conf int. 
      xaxt='n', #hide x axis to label with months 
-#     yaxt='n', #hide y axis to label with thousands
+     #     yaxt='n', #hide y axis to label with thousands
      fcol='black', #prediction line color
      flty=2,
      type="p",
@@ -123,4 +129,5 @@ legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #plot in top 
 
 # ## **Close Device  ===========================================================
 # dev.off ()
-# 
+
+
