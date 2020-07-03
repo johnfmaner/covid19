@@ -1,5 +1,5 @@
 # WORKING DIR -----------------------------------------------------------
-myDir <- "~/Documents/projects/covid/" #specify your directory
+myDir <- "~/Documents/projects/covid19/" #specify your directory
 setwd(myDir)
 
 # DEPENDENCIES -----------------------------------------------------------
@@ -31,11 +31,14 @@ covid <- myCountry(dataIn, loc)
 jan1 <- ymd("2020-01-01")     #Jan 1
 recent <- max(covid$date)      #Most recent day from owid-covid data
 
-start1 <- ymd("2020-05-05")     
-end1 <- ymd("2020-06-16")        
+start0 <- find.start(covid)    #set to date in which first case was reported   
 
-ts.start <- jan1
-ts.end <- recent 
+start1 <- ymd("2020-05-05")   
+end1 <- ymd("2020-06-06")        
+
+ts.start <- start0
+ts.end <- recent
+
 #TODO: add ts.start, ts.end as selectable fields (ideally from calendar or drop down in Shiny)
 #create time series of new_cases from ts.start to ts.end days. 
 data <- myTimeseries(covid, "new_cases", ts.start, ts.end)
@@ -50,19 +53,19 @@ month.names = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 # FORECASTING -----------------------------------------------------------
 
 pred.int = 30 #used for drawing plot windows and vertical lines 
-fore.type = "arima"
+fore.type = "tbats"
 Fcast <- myForecast(source=data, type=fore.type, predInt=pred.int, confLevels=c(80,95))
 
 # PLOT -----------------------------------------------------------
-## **Image Device ===========================================================
-out.dir <- paste(myDir,"figures/",sep="")
-out.fname <- paste(loc, fore.type, pred.int, ts.start, ts.end, sep="-")
-out.ftype <- "png"
-out.final<- paste(out.dir, out.fname,".", out.ftype, sep="")
-png(filename=out.final,
-    width=800,height=800,
-    bg='white',pointsize = 20)
-
+# ## **Image Device ===========================================================
+# out.dir <- paste(myDir,"figures/",sep="")
+# out.fname <- paste(loc, fore.type, pred.int, ts.start, ts.end, sep="-")
+# out.ftype <- "png"
+# out.final<- paste(out.dir, out.fname,".", out.ftype, sep="")
+# png(filename=out.final,
+#     width=800,height=800,
+#     bg='white',pointsize = 20)
+# 
 ## **Forecast Plot ===========================================================
 plotTitle <- paste(loc, pred.int, "Day", toupper(fore.type), "Forecast", sep=" ")
 
@@ -118,6 +121,6 @@ legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #plot in top 
        lty=c(1,2,1,1),lwd=c(2,2,15,15))
 
 
-## **Close Device  ===========================================================
-dev.off ()
-
+# ## **Close Device  ===========================================================
+# dev.off ()
+# 

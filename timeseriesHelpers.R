@@ -27,7 +27,7 @@ date.day <- function(date) {
 myCountry <- function(source, loc) {
   "
   RETURNS: (,named list) Subset of input data (source) filtered by location
-  (source, data.frame) input owid-covid data.frame
+  (source, data.frame) input owid-covid data source 
   (loc, string), country name/location
   "
   
@@ -38,7 +38,7 @@ myCountry <- function(source, loc) {
     subset(source, tolower(location) == loc)
   }
   else {
-    stop("Location is not a valid location")
+    stop("Location is not a valid location. ")
   }
 }
 
@@ -58,7 +58,7 @@ myContinent <- function(source, loc) {
     subset(source, tolower(continent) == loc)
   }
   else {
-    stop("Continent is not a valid location")
+    stop("Continent is not a valid location. ")
   }
 }
 
@@ -89,8 +89,8 @@ myForecast <- function(source, type, predInt, confLevels) {
   "
   
   #available forecasting models -- will add more in future! 
-  myTypes <- c("arima","tbats","ets")
-  myFuns <-  c("auto.arima","tbats","ets")
+  myTypes <- c("arima","tbats","ets","nnetar")
+  myFuns <-  c("auto.arima","tbats","ets","nnetar")
   
   type <- tolower(type) #convert type to lowercase for ease of use
   
@@ -110,6 +110,22 @@ myForecast <- function(source, type, predInt, confLevels) {
     forecast(myFitfunction(source), h=predInt, level=confLevels)
   }
   else{
-    stop("Forecast type is not available")
+    stop("Forecast type is not available. ")
+  }
+}
+
+find.start<- function(source) {
+  "
+  RETURNS: (, date) date of first case from owid-covid data (ideally from myCountry output)
+  (source, named list) output of myCountry or myContinent containing total_cases and date columns. 
+  "
+  
+  for (val in seq(1:length(source$total_cases))) {
+    if (source$total_cases[val] != 0) {
+      return(ymd(source$date[val]))
+      break
+    } else {
+      next
+    }
   }
 }
