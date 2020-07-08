@@ -23,7 +23,7 @@ Sample figures of forecasting daily new cases and total cases of COVID19 in mult
 ### timeseriesHelpers.R
 Helper functions to download data, create time series, subsets by country, and generate forecast values over an interval with a specified model. 
 
-### timeseriesPrediction.R
+### timeseriesForecast.R
 Loads owid_covid.csv data and performs forecasting for specified country. One can specify the time series start and end points, forecasting model, and country. 
 
 ### timeseriesComparison.R
