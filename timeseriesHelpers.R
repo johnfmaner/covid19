@@ -11,7 +11,7 @@ download.owid <- function(download.dir, file.name) {
   "
   
   owid.url <- "https://covid.ourworldindata.org/data/owid-covid-data.csv"
-  download.final <- paste(download.dir, file.name)
+  download.final <- paste(download.dir, file.name,sep="")
   download.file(owid.url, download.final)
 }
 
@@ -114,8 +114,6 @@ myForecast <- function(source, type, predInt, confLevels) {
   if(missing(confLevels)) {
     confLevels = c(80,95)
     print("Using default 95% and 80% confidence intervals")
-  } else {
-    confLevels = confLevels
   }
   
   #perform forecasting type if available in myTypes
@@ -180,4 +178,38 @@ var.name <- function(var) {
   }
   
   return(myNames[match(var, myVars)])
+}
+
+myColors <- function(source, col1, col2) {
+  "
+  RETURNS: (,list) color code source by height from col1 (min) to col2 (max)
+  (source, named list) univariate data to color code 
+  (col1, string) valid color string to start color ramp
+  (col2, string) valid color string to end color ramp
+  "
+  
+  myPal <- colorRampPalette(c('green','red'))
+  return(myPal(10)[as.numeric(cut(source,breaks = 10))])
+}
+
+myAugmentedforecast <- function(dailyforecast, totalsource) {
+  "RETURNS: (, ts) new forecast built on daily forecast rather than predicting from total
+  i.e forecast total_cases from new_cases 
+  (dailyforecast, named list) result from myForecast, 
+  (totalsource, named list) result from myTimeseries
+  "
+  
+  total.end <- end(totalsource)[1] #last day in time series
+  forecast.length <- length(dailyforecast$mean)
+  
+  total.augmented <- ts(totalsource[length(totalsource)], 
+                        start=total.end, 
+                        end=total.end + forecast.length)   
+  
+  for (i in seq(1:forecast.length)) {
+    total.augmented[i+1] <- total.augmented[i] + daily.forecast$mean[i]  
+  }
+  
+  #exclude first value 
+  return(total.augmented) 
 }
