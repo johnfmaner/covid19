@@ -1,6 +1,6 @@
 # Time series analysis of COVID19 data using R. 
 
-![GitHub Logo](figures/Brazil-arima-30-2020-01-01-2020-07-02.png)
+![Example figure](figures/Brazil%20Daily%20new%20cases%2030%20Day%20ARIMA%20Forecast.png)
 
 This project is a self learning experiment with time series forecasting models in R. The long term goal of this project is to build a Rshiny dashboard to forecast the new daily cases of COVID 19. 
 
@@ -18,13 +18,16 @@ This project uses the Our World In Data COVID19 data found on Github: (https://g
 This folder includes a bash script to download the most recent data release. This data includes 212 unique locations, so it may be easily adapted to other countries or continents. Additionally, the data may be directly downloaded in R using the helper function `download.owid(download.dir, file.name)`
 
 ### /figures
-Sample figures of TBATS, ETS, and ARIMA forecasting of COVID19 daily new cases data in Mexico, United States, Italy, and Brazil. The spike in new cases per day in late June diverges from the predictable periodic behavior seen beginning clearly in May through the middle of June. 
+Sample figures of forecasting daily new cases and total cases of COVID19 in multiple countries. 
 
 ### timeseriesHelpers.R
 Helper functions to download data, create time series, subsets by country, and generate forecast values over an interval with a specified model. 
 
 ### timeseriesPrediction.R
 Loads owid_covid.csv data and performs forecasting for specified country. One can specify the time series start and end points, forecasting model, and country. 
+
+### timeseriesComparison.R
+Compares forecasts built on total cases and daily new cases. 
 
 A bare minimum example: 
 
@@ -56,7 +59,7 @@ plot(Fcast)
 ## To do
 - [x] Create bash script to download data directly from OWID website. 
 - [X] Easily swap between country and forecasting models
-- [X] Add helper functions. 
-- [ ] Use predictions to calculate total cases, compare to predictions built on total cases? 
-- [ ] Build shiny dashboard
+- [X] Add helper functions (ongoing) . 
+- [X] (WIP) Use predictions to calculate total cases, compare to predictions built on total cases. Add confidence intervals next, compare which method is more effective. 
+- [ ] Build shiny dashboard! 
 
