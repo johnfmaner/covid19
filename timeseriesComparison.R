@@ -14,7 +14,7 @@ source("timeseriesHelpers.R") #load helper functions
 
 myData <- paste(myDir, "data/",sep="")
 myFile <- "owid-covid.csv"
-#download.owid(myData,myFile) 
+#download.owid(myData, myFile) 
 
 
 ## **Read CSV ============================================
@@ -57,7 +57,7 @@ month.names = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 # FORECASTING -----------------------------------------------------------
 
 pred.int = 30 #used for drawing plot windows and vertical lines
-fore.type = "arima" #WARNING: TBATS not recommended for non periodic data (i.e totals)
+fore.type = "arima" #WARNING: TBATS not recommended for non periodic data (i.e ts.var <- total_)
 
 daily.forecast <- myForecast(daily.ts, fore.type, pred.int)
 total.forecast <- myForecast(total.ts, fore.type, pred.int)
@@ -66,13 +66,13 @@ total.augm <- myAugmentedforecast(daily.forecast, total.ts) #augmented forecast 
 
 # PLOT -----------------------------------------------------------
 # ## **Image Device ===========================================================
-out.dir <- paste(myDir,"figures/",sep="")
+# out.dir <- paste(myDir,"figures/",sep="")
 out.fname <- paste(loc, var.name(total.var), pred.int, "Day", toupper(fore.type), "Forecast", sep=" ")
-out.ftype <- "png"
-out.final<- paste(out.dir, out.fname,".", out.ftype, sep="")
-png(filename=out.final,
-    width=800,height=800,
-    bg='white',pointsize = 20)
+# out.ftype <- "png"
+# out.final<- paste(out.dir, out.fname,".", out.ftype, sep="")
+# png(filename=out.final,
+#     width=800,height=800,
+#     bg='white',pointsize = 20)
 
 ## **Forecast Plot ===========================================================
 plot(total.forecast,
@@ -125,4 +125,4 @@ legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #plot in top 
        bg='transparent')
 
 # ## **Close Device  ===========================================================
-dev.off ()
+#dev.off ()

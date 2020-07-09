@@ -24,7 +24,7 @@ dataIn <- read.csv(paste(myData, myFile, sep=""), header=TRUE)
 
 ## **Country Data ===========================================================
 #load data and create subset of data for a country
-loc <- "Mexico"         #Eventually add ability to choose from unique(dataIn$location). 
+loc <- "United States"         #Eventually add ability to choose from unique(dataIn$location). 
 loc.data <- myCountry(dataIn, loc)
 
 ## **Time Series ===========================================================
@@ -60,13 +60,13 @@ Fcast <- myForecast(source=data, type=fore.type, predInt=pred.int)#, confLevels=
 
 # PLOT -----------------------------------------------------------
 ## **Image Device ===========================================================
-out.dir <- paste(myDir,"figures/",sep="")
+# out.dir <- paste(myDir,"figures/",sep="")
 out.fname <- paste(loc, var.name(ts.var), pred.int, "Day", toupper(fore.type), "Forecast", sep=" ")
-out.ftype <- "png"
-out.final<- paste(out.dir, out.fname,".", out.ftype, sep="")
-png(filename=out.final,
-    width=800,height=800,
-    bg='white',pointsize = 20)
+# out.ftype <- "png"
+# out.final<- paste(out.dir, out.fname,".", out.ftype, sep="")
+# png(filename=out.final,
+#     width=800,height=800,
+#     bg='white',pointsize = 20)
 
 ## **Forecast Plot ===========================================================
 
@@ -121,4 +121,4 @@ legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #plot in top 
        lty=c(1,2,1,1),lwd=c(2,2,15,15))
 
 ## **Close Device  ===========================================================
-dev.off ()
+#dev.off ()
