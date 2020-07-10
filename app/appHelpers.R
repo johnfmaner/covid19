@@ -198,12 +198,10 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
 
   loc.data <- myCountry(source, loc)
   ts.data <- myTimeseries(loc.data, ts.var, ts.start, ts.end)
-  data0 <- myTimeseries(loc.data, ts.var,jan1, recent) #all data to plot as points
+  data0 <- myTimeseries(loc.data, ts.var,ts.start, recent) #all data to plot as points
   ts.forecast <- myForecast(ts.data, fore.type, pred.int)
 
   out.fname <- paste(loc, var.name(ts.var), pred.int, "Day Forecast", sep=" ")
-
-  ylim <- if ()
 
   #forecast interval plot 
   plot(ts.forecast,
