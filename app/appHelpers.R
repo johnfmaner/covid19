@@ -98,7 +98,7 @@ myForecast <- function(source, type, predInt) {
   (predInt, integer) days to forecast from end of time series
   "
 
-  confLevels = c(80,95)
+  confLevels = c(95)#,95)
   myFitfunction <- get(type)
   return(forecast(myFitfunction(source), h=predInt, level=confLevels))
 }
@@ -209,34 +209,35 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
      sub="(data: Our World in Data Coronavirus Source Data)",
      ylab=var.name(ts.var),
      xlim=c(date.day(ts.start), date.day(ts.end) + pred.int),
-     shadecols = c("grey80", "grey70"), #color conf int.
+     shadecols = c("#FFB1B1"),#, "grey70"), #color conf int.
      xaxt='n', #hide x axis to label with months
      fcol='black', #prediction line color
      type='p',
      col=NA,
      flty=2,
-     showgap=FALSE
+     showgap=FALSE #draw prediction intervals from ts.end = FALSE. 
      )
   axis(1, labels=month.names,at=month.days) #create axis with months.
   abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)
-  abline(v=date.day(ts.start),col='red',lty=2,lwd=2)
-  abline(v=date.day(ts.end),col='red',lty=2,lwd=2)
+  #abline(v=date.day(ts.start),col='red',lty=2,lwd=2)
+  #abline(v=date.day(ts.end),col='red',lty=2,lwd=2)
   abline(0,0)
 
-  data0.colors <- myColors(data0, "red","green")
-  points(data0,col=data0.colors,pch=19,cex=0.9)
+  #data0.colors <- myColors(data0, "red","green")
+  #points(data0,col=data0.colors,pch=19,cex=0.9)
+  lines(data0,type='h',lwd=2.5,col="#FF4545")
 
   moav <- ma(data0, order=2) 
   lines(moav,col='black',lwd=2) #plot moving average
 
   confLevel1<-ts.forecast$level[1] #confidence levels for creating legend automatically
-  confLevel2<-ts.forecast$level[2]
-  confLegend <- c(paste(confLevel1, "% Confidence",sep=""),
-                  paste(confLevel2, "% Confidence",sep=""))
+  #confLevel2<-ts.forecast$level[2]
+  confLegend <- c(paste(confLevel1, "% Confidence",sep=""))
+ #                 paste(confLevel2, "% Confidence",sep=""))
 
-  legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #plot in top left corner
-        legend=c("Moving Average","Forecast", confLegend[1] ,confLegend[2]),
-        col=c("black",'black','grey80','grey70'),
-        lty=c(1,2,1,1),lwd=c(2,2,15,15))
+  legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #legend in top left corner
+        legend=c("Moving Average","Forecast", confLegend[1]),# ,confLegend[2]),
+        col=c("black",'black','#FFB1B1'),#,'grey70'),
+        lty=c(1,2,1),lwd=c(2,2,15),#,15),
+        bg='transparent')
 }
-
