@@ -1,10 +1,8 @@
 library(forecast) #moving average, forecasting
 library(lubridate) #working with dates
 
-
 #DATA -----------------------------------------------------------
-"I think it leads to cleaner file structure if these arrays are sourced rather 
-than storing them as files and loading them. "
+myLocations <- source("~/Documents/projects/covid19/data/myLocations.R")
 
 #available variables and names 
 myVars<- c("total_cases","new_cases","total_deaths","new_deaths",
@@ -18,14 +16,13 @@ myNames <- c("Total cases","Daily new cases","Total deaths","Daily new deaths","
         "Total tests","Daily new tests","Total tests / thousand","Daily new test / thousand",
         "Daily new tests (smoothed)","Daily new tests (smoothed) / thousand")
 
-myVars.Names <- cbind(myVars, myNames )
-
-#all locations in owid-covid data. 
-myLocations <- read.table('myLocations.csv')
-
 #forecast types and names 
 myTypes <- c("arima","tbats","ets","nnetar")
 myFuns <-  c("auto.arima","tbats","ets","nnetar")
+
+#month days and names for drawing better axis 
+month.days = c(001,032,061,092,122,153,183,214,245,275,306,336)
+month.names = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
 
 # FUNCTIONS -----------------------------------------------------------
 
@@ -57,14 +54,7 @@ myCountry <- function(source, loc) {
   (loc, string), country name/location
   "
   
-  loc <- tolower(loc) #convert location to lowercase for ease of use
-  
-  if (is.na(match(loc, tolower(myLocations))) == FALSE){
-    return(subset(source, tolower(location) == loc))
-  }
-  else {
-    stop("Location is not a valid location. ")
-  }
+  return(subset(source, source$location == loc))
 }
 
 myContinent <- function(source, loc) {
@@ -76,14 +66,6 @@ myContinent <- function(source, loc) {
   (loc, string), continent name
   "
   
-  loc <- tolower(loc) #convert location to lowercase for ease of use
-  
-  if (is.na(match(loc, tolower(myLocations))) == FALSE){
-    return(subset(source, tolower(continent) == loc))
-  }
-  else {
-    stop("Continent is not a valid location. ")
-  }
 }
 
 myTimeseries <- function(source, var, start, stop) {
@@ -94,10 +76,6 @@ myTimeseries <- function(source, var, start, stop) {
   (start, date) ymd('YYYY-MM-DD)' lubridate object for starting point of time series
   (stop, date) ymd('YYYY-MM-DD') lubrdiate object for stopping point of time series
   "
-  
-  if(is.na(match(var, myVars)) == TRUE){
-    stop("Not a valid time series variable")
-  }
   
   myStart = date.day(start)
   myEnd = date.day(stop)
@@ -112,35 +90,17 @@ myTimeseries <- function(source, var, start, stop) {
             end=myEnd))
 }
 
-myForecast <- function(source, type, predInt, confLevels) {
+myForecast <- function(source, type, predInt) {
   "
   RETURNS: ( ,named list) time series forecast on a dataset using (type) forecasting method
   (source, ts) times series object to compute forecast values 
   (type, char) forecasting method as a string 
   (predInt, integer) days to forecast from end of time series
-  (confLevels, numeric vector) vector specifying confidence intervals as percentage
   "
-  
-  #available forecasting models -- will add more in future! 
-  
-  type <- tolower(type) #convert type to lowercase for ease of use
-  
-  #if conf intervals not specified, default to 95% and 80%
-  if(missing(confLevels)) {
-    confLevels = c(80,95)
-    print("Using default 95% and 80% confidence intervals")
-  }
-  
-  #perform forecasting type if available in myTypes
-  if (is.na(match(type, myTypes)) == FALSE ){
-    funIndex <- match(type, myTypes)
-    myFitfunction <- get(myFuns[funIndex])
-    #output:
-    return(forecast(myFitfunction(source), h=predInt, level=confLevels))
-  }
-  else{
-    stop("Forecast type is not available. ")
-  }
+
+  confLevels = c(80,95)
+  myFitfunction <- get(type)
+  return(forecast(myFitfunction(source), h=predInt, level=confLevels))
 }
 
 find.start<- function(source, var) {
@@ -169,6 +129,13 @@ find.start<- function(source, var) {
   } else {
     return(start.val)
   }
+}
+
+recent.date <- function(source) {
+  "RETURNS: (, int) returns most recent (assuming the last) date in owid-covid data
+  (source, named list) owid-covid raw data"
+
+  return(max(source$date))
 }
 
 var.name <- function(var) {
@@ -217,3 +184,61 @@ myAugmentedforecast <- function(dailyforecast, totalsource) {
   #exclude first value 
   return(total.augmented) 
 }
+
+
+myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pred.int) {
+  "RETURNS: (, figure) Generates forecast plot for one country (replicates timeseriesForecast.R)
+  (loc, string) valid location (country)
+  (ts.var, string) y-axis variable to plot
+  (ts.start, ymd) lubridate ymd object 
+  (ts.end, ymd) lubridate ymd object
+  (fore.type, string) forecasting model 
+  (pred.int, int) days in the future to forecast. 
+  "
+
+  loc.data <- myCountry(source, loc)
+  ts.data <- myTimeseries(loc.data, ts.var, ts.start, ts.end)
+  data0 <- myTimeseries(loc.data, ts.var,jan1, recent) #all data to plot as points
+  ts.forecast <- myForecast(ts.data, fore.type, pred.int)
+
+  out.fname <- paste(loc, var.name(ts.var), pred.int, "Day Forecast", sep=" ")
+
+  ylim <- if ()
+
+  #forecast interval plot 
+  plot(ts.forecast,
+     main=out.fname,
+     sub="(data: Our World in Data Coronavirus Source Data)",
+     ylab=var.name(ts.var),
+     xlim=c(date.day(ts.start), date.day(ts.end) + pred.int),
+     shadecols = c("grey80", "grey70"), #color conf int.
+     xaxt='n', #hide x axis to label with months
+     fcol='black', #prediction line color
+     type='p',
+     col=NA,
+     flty=2,
+     showgap=FALSE
+     )
+  axis(1, labels=month.names,at=month.days) #create axis with months.
+  abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)
+  abline(v=date.day(ts.start),col='red',lty=2,lwd=2)
+  abline(v=date.day(ts.end),col='red',lty=2,lwd=2)
+  abline(0,0)
+
+  data0.colors <- myColors(data0, "red","green")
+  points(data0,col=data0.colors,pch=19,cex=0.9)
+
+  moav <- ma(data0, order=2) 
+  lines(moav,col='black',lwd=2) #plot moving average
+
+  confLevel1<-ts.forecast$level[1] #confidence levels for creating legend automatically
+  confLevel2<-ts.forecast$level[2]
+  confLegend <- c(paste(confLevel1, "% Confidence",sep=""),
+                  paste(confLevel2, "% Confidence",sep=""))
+
+  legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #plot in top left corner
+        legend=c("Moving Average","Forecast", confLegend[1] ,confLegend[2]),
+        col=c("black",'black','grey80','grey70'),
+        lty=c(1,2,1,1),lwd=c(2,2,15,15))
+}
+
