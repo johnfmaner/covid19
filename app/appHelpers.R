@@ -1,5 +1,6 @@
 library(forecast) #moving average, forecasting
 library(lubridate) #working with dates
+library(stats) #linear models
 
 #DATA -----------------------------------------------------------
 myLocations <- source("~/Documents/projects/covid19/data/myLocations.R")
@@ -11,10 +12,10 @@ myVars<- c("total_cases","new_cases","total_deaths","new_deaths",
            "total_tests","new_tests","total_tests_per_thousand",
            "new_tests_per_thousand","new_tests_smoothed","new_tests_smoothed_per_thousand")
 
-myNames <- c("Total cases","Daily new cases","Total deaths","Daily new deaths","Total case / million",
-        "Daily new cases / million","Total deaths / million","Daily new deaths / million",
-        "Total tests","Daily new tests","Total tests / thousand","Daily new test / thousand",
-        "Daily new tests (smoothed)","Daily new tests (smoothed) / thousand")
+myNames <- c("Total Cases","Daily New Cases","Total Deaths","Daily New Deaths","Total Cases / million",
+        "Daily New Cases / Million","Total Deaths / Million","Daily New Deaths / Million",
+        "Total Tests","Daily New tests","Total tests / Thousand","Daily New Tests / Thousand",
+        "Daily New Tests (smoothed)","Daily New Tests (smoothed) / Thousand")
 
 #forecast types and names 
 myTypes <- c("arima","tbats","ets","nnetar")
@@ -81,10 +82,15 @@ myTimeseries <- function(source, var, start, stop) {
   myEnd = date.day(stop)
   
   if (myStart > myEnd) {
-    message <- paste("Error in stop arg:",start,"occured before",stop,sep=" ")
+    message <- paste("Error:",start,"occured before",stop,sep=" ")
     stop(message)
   }
   
+  min.Date <- date.day(min(source$date))
+  if (myStart > min.Date) {
+    myStart <- min.Date
+  }
+
   return(ts(subset(source[var], source$date <= stop & source$date >= start), 
             start=myStart, 
             end=myEnd))
@@ -201,12 +207,13 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
   data0 <- myTimeseries(loc.data, ts.var,ts.start, recent) #all data to plot as points
   ts.forecast <- myForecast(ts.data, fore.type, pred.int)
 
-  out.fname <- paste(loc, var.name(ts.var), pred.int, "Day Forecast", sep=" ")
+  #out.fname <- paste(loc, var.name(ts.var), pred.int, "Day Forecast", sep=" ")
 
   #forecast interval plot 
+  par(mar = c(6.5, 6.5, 0.5, 0.5), mgp = c(5, 1, 0))
+
   plot(ts.forecast,
-     main=out.fname,
-     sub="(data: Our World in Data Coronavirus Source Data)",
+     main="",
      ylab=var.name(ts.var),
      xlim=c(date.day(ts.start), date.day(ts.end) + pred.int),
      shadecols = c("#FFB1B1"),#, "grey70"), #color conf int.
@@ -215,7 +222,8 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
      type='p',
      col=NA,
      flty=2,
-     showgap=FALSE #draw prediction intervals from ts.end = FALSE. 
+     showgap=FALSE, #draw prediction intervals from ts.end = FALSE. 
+     las=1
      )
   axis(1, labels=month.names,at=month.days) #create axis with months.
   abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)
@@ -225,7 +233,7 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
 
   #data0.colors <- myColors(data0, "red","green")
   #points(data0,col=data0.colors,pch=19,cex=0.9)
-  lines(data0,type='h',lwd=2.5,col="#FF4545")
+  lines(data0,type='h',lwd=3.0,col="#FF4545")
 
   moav <- ma(data0, order=2) 
   lines(moav,col='black',lwd=2) #plot moving average
@@ -235,9 +243,53 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
   confLegend <- c(paste(confLevel1, "% Confidence",sep=""))
  #                 paste(confLevel2, "% Confidence",sep=""))
 
-  legend(date.day(ts.start) + 1, par("usr")[4] - par("usr")[4]*0.02, #legend in top left corner
+  legend("topleft", inset=0.05,
         legend=c("Moving Average","Forecast", confLegend[1]),# ,confLegend[2]),
         col=c("black",'black','#FFB1B1'),#,'grey70'),
         lty=c(1,2,1),lwd=c(2,2,15),#,15),
-        bg='transparent')
+        title=loc, bg='transparent')
+}
+
+xy.plot <- function(source, x, y) {
+  "RETURNS (, xy plot) Generic X-Y plot for two variables
+  (source, named list) source data from which to plot, ideally from myCountry,
+  (x, string) x variable
+  (y, string) y variable
+  "
+
+  xy.data <- cbind(source[x], source[y])
+
+  plot(xy.data,
+  xlab = var.name(x),
+  ylab= var.name(y), 
+  type='p',
+  col='grey35',
+  cex=2,
+  pch=19)
+}
+
+xy.linreg <- function(source, x, y) {
+"RETURNS (, lines) simple linear regression of y ~ x to ADD to xy.plot
+  (source, named list) source data from which to plot, ideally from myCountry,
+  (x, string) x variable
+  (y, string) y variable
+"
+
+xy.data <- cbind(source[x], source[y])
+lm1 <- lm(as.matrix(xy.data[2]) ~ as.matrix(xy.data[1]))
+
+abline(lm1, lty=2, col='red')
+}
+
+xy.linreg <- function(source, x, y) {
+"RETURNS (, lines) simple linear regression of y ~ x to ADD to xy.plot
+  (source, named list) source data from which to plot, ideally from myCountry,
+  (x, string) x variable
+  (y, string) y variable
+"
+
+xy.data <- cbind(source[x], source[y])
+lm1 <- lm(as.matrix(xy.data[2]) ~ as.matrix(xy.data[1]))
+
+abline(lm1, lty=2, col='red')
 }

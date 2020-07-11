@@ -24,13 +24,13 @@ dataIn <- read.csv(paste(myData, myFile, sep=""), header=TRUE)
 
 ## **Country Data ===========================================================
 #load data and create subset of data for a country
-loc <- "United States"         #Eventually add ability to choose from unique(dataIn$location). 
+loc <- "Bhutan"         #Eventually add ability to choose from unique(dataIn$location). 
 loc.data <- myCountry(dataIn, loc)
 
 ## **Time Series ===========================================================
 #create subsets of time series data
 #variable with which to create time series 
-ts.var <- "new_cases"
+ts.var <- "total_cases"
 
 #useful dates 
 jan1 <- ymd("2020-01-01") 
