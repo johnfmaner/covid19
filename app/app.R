@@ -22,20 +22,12 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
                             ')),
                   tags$h3("Inputs:"),
                   selectInput("loc", "Location:", myLocations,selected="Brazil",multiple=FALSE),
-                  # dateRangeInput("ts.range", "Date range (YYYY-MM-DD):",
-                  #         "inDateRange",        
-                  #         format = "yyyy-mm-dd",
-                  #         separator = "-"
-                  #         ),
-                  dateRangeInput("ts.range", "Date range (YYYY-MM-DD)",
-                                start = "2020-01-22", #Days since 30 total cases 
-                                min = "2020-01-22",
-                                end=recent,
+                  dateInput("ts.end", "End date (YYYY-MM-DD)",
+                                min = "2020-01-01",
                                 max=recent),
                   selectInput("ts.var", "Variable", myVars,selected="new_cases",multiple=FALSE),
                   selectInput("fore.type", "Forecast Model", myFuns,multiple=FALSE),
-                  sliderInput("pred.int", "Prediction Interval", min=0,max=30,value=10),
-
+                  sliderInput("pred.int", "Prediction Interval", min=1,max=30,value=10),
                  
                width=3), # sidebarPanel
                mainPanel(
@@ -61,7 +53,7 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
                   selectInput("y", "Y", myVars, multiple = FALSE,selected = 'new_tests'),
                width=3), # sidebarPanel
                mainPanel(
-                         plotOutput("xy.plot"),
+                         plotOutput("xy.plot", height="500"),
                width=9) # mainPanel
       ), # X-Y Plotting, tabPanel
 
@@ -75,18 +67,30 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
           br(),
           br(),
           HTML('<center><iframe src="https://githubbadge.appspot.com/johnfmaner" style="border: 0;height: 150px;width: 300px;overflow: hidden;" frameBorder="0"></iframe></center>'),
+          br(),
+          br(),
+          br(),
+          br(),
           position="left", width=5), #About, sidebarPanel
 
       h5("DISCLAIMER"),
       p("I do not claim to be an epidemiologist in any capacity. 
       This work in no way claims to account for easing of stay-at-home mandates, social distancing, face covering usage, and other factors.
       This project is simply a self learning experiment with time series forecasting models in R, which know nothing about epidemiology. 
-      Despite being derived from official data, any predictions produced by this work are not to be taken as official predictions."),
+      Despite being derived from official data sources, any predictions produced by this work are NOT to be taken as official predictions."),
+      br(),
+      p("Additionally: OWID data includes corrections from official sources, which may appear as negative values when viewing new cases, new tests, new deaths, etc. Currently, 
+      these values remain unchanged, which may affect the performance of the forecast model."),
 
       h5("Data"), 
       p("This project utilizes the Our World in Data (OWID) source data, which can be found directly at 
       the", a(href = 'https://ourworldindata.org/coronavirus-source-data/', 'OWID Website'),".
-      OWID data is entirely open source and provides extensive documentation regarding their sources and methods. "),
+      OWID data is entirely open source and includes extensive documentation regarding their sources and methods."),
+
+      h5("Methods"),
+      p("Forecasted values are calculated using the", a(href = 'https://cran.r-project.org/web/packages/forecast/index.html', 'forecast'), "package in R. A geographic subset of data is
+      first created according to the specified country. This data is then formatted as a time series of one variable which starts at the first date in which the desired variable is
+      greater than 0, and ends at the user specified date. A forecast is then built according to the user selected forecasting model, and visualized. "),
 
       h5("The Creator"),
       p("I am a recent Texas A&M graduate currently residing in Orlando, FL. After graduating with a BSc. in Physics, I began self learning
@@ -103,23 +107,12 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
   
   # Define server function  
   server <- function(input, output, session) {
-    
-    #trying to automate start date, however, may just have to settle with a fixed date.
-    # observe({updateDateRangeInput(session, "inDateRange",
-    #     start = find.start(myCountry(dataIn, input$loc), 
-    #                       input$ts.var),
-    #     end = recent,
-    #     min = "2020-01-01",
-    #     max = recent
-    #     )
-    # })
 
     output$myForecast.plot <- renderPlot({
       myForecast.plot(source=dataIn, 
                     loc= input$loc, 
                     ts.var=input$ts.var,
-                    ts.start=ymd(input$ts.range[1]),
-                    ts.end=ymd(input$ts.range[2]), 
+                    ts.end=ymd(input$ts.end), 
                     fore.type=input$fore.type, 
                     pred.int=input$pred.int)
     })
@@ -133,3 +126,9 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
 
   # Create Shiny object
   shinyApp(ui = ui, server = server)
+
+  mc<- myCountry(dataIn, "Romania")
+  mt<- myTimeseries(mc, "new_cases", recent)
+  mf <- myForecast(mt, "auto.arima", 30)
+
+plot(mf)

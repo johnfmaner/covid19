@@ -18,8 +18,7 @@ myNames <- c("Total Cases","Daily New Cases","Total Deaths","Daily New Deaths","
         "Daily New Tests (smoothed)","Daily New Tests (smoothed) / Thousand")
 
 #forecast types and names 
-myTypes <- c("arima","tbats","ets","nnetar")
-myFuns <-  c("auto.arima","tbats","ets","nnetar")
+myFuns <-  c("auto.arima","ets","tbats")
 
 #month days and names for drawing better axis 
 month.days = c(001,032,061,092,122,153,183,214,245,275,306,336)
@@ -46,67 +45,6 @@ date.day <- function(date) {
   "
   
   return(as.integer(strftime(date, format="%j")))
-}
-
-myCountry <- function(source, loc) {
-  "
-  RETURNS: (,named list) Subset of input data (source) filtered by location
-  (source, data.frame) input owid-covid data source 
-  (loc, string), country name/location
-  "
-  
-  return(subset(source, source$location == loc))
-}
-
-myContinent <- function(source, loc) {
-  #TODO: aggregate values for each data for each country 
-  
-  "
-  RETURNS: (,named list) Subset of input data (source) filtered by continent
-  (source, data.frame) input owid-covid data.frame
-  (loc, string), continent name
-  "
-  
-}
-
-myTimeseries <- function(source, var, start, stop) {
-  "
-  RETURNS: (,ts) Time series data of source$var from start:stop 
-  (source, named list) input OWID covid data frame ideally input from myCountry or myContinent
-  (var, string) variable to create time series of
-  (start, date) ymd('YYYY-MM-DD)' lubridate object for starting point of time series
-  (stop, date) ymd('YYYY-MM-DD') lubrdiate object for stopping point of time series
-  "
-  
-  myStart = date.day(start)
-  myEnd = date.day(stop)
-  
-  if (myStart > myEnd) {
-    message <- paste("Error:",start,"occured before",stop,sep=" ")
-    stop(message)
-  }
-  
-  min.Date <- date.day(min(source$date))
-  if (myStart > min.Date) {
-    myStart <- min.Date
-  }
-
-  return(ts(subset(source[var], source$date <= stop & source$date >= start), 
-            start=myStart, 
-            end=myEnd))
-}
-
-myForecast <- function(source, type, predInt) {
-  "
-  RETURNS: ( ,named list) time series forecast on a dataset using (type) forecasting method
-  (source, ts) times series object to compute forecast values 
-  (type, char) forecasting method as a string 
-  (predInt, integer) days to forecast from end of time series
-  "
-
-  confLevels = c(95)#,95)
-  myFitfunction <- get(type)
-  return(forecast(myFitfunction(source), h=predInt, level=confLevels))
 }
 
 find.start<- function(source, var) {
@@ -143,6 +81,64 @@ recent.date <- function(source) {
 
   return(max(source$date))
 }
+
+myCountry <- function(source, loc) {
+  "
+  RETURNS: (,named list) Subset of input data (source) filtered by location
+  (source, data.frame) input owid-covid data source 
+  (loc, string), country name/location
+  "
+  
+  return(subset(source, source$location == loc))
+}
+
+myContinent <- function(source, loc) {
+  #TODO: aggregate values for each data for each country 
+  
+  "
+  RETURNS: (,named list) Subset of input data (source) filtered by continent
+  (source, data.frame) input owid-covid data.frame
+  (loc, string), continent name
+  "
+  
+}
+
+myTimeseries <- function(source, var, stop) {
+  "
+  RETURNS: (,ts) Time series data of source$var from start:stop 
+  (source, named list) input OWID covid data frame ideally input from myCountry or myContinent
+  (var, string) variable to create time series of
+  (start, date) ymd('YYYY-MM-DD)' lubridate object for starting point of time series
+  (stop, date) ymd('YYYY-MM-DD') lubrdiate object for stopping point of time series
+  "
+  start <- find.start(source, var)
+
+  start.day <- date.day(start)
+  end.day <- date.day(stop)
+  
+  if (start.day > end.day) {
+    message <- paste("Error:",start,"occured before",stop,sep=" ")
+    stop(message)
+  }
+
+  return(ts(subset(source[var], source$date <= stop & source$date >= start), 
+            start=start.day, 
+            end=end.day))
+}
+
+myForecast <- function(source, type, predInt) {
+  "
+  RETURNS: ( ,named list) time series forecast on a dataset using (type) forecasting method
+  (source, ts) times series object to compute forecast values 
+  (type, char) forecasting method as a string 
+  (predInt, integer) days to forecast from end of time series
+  "
+
+  confLevels = c(95)#,95)
+  myFitfunction <- get(type)
+  return(forecast(myFitfunction(source), h=predInt, level=confLevels))
+}
+
 
 var.name <- function(var) {
   "
@@ -191,20 +187,27 @@ myAugmentedforecast <- function(dailyforecast, totalsource) {
   return(total.augmented) 
 }
 
+find.ylim <- function(ts, forecast) {
+  "RETURNS: (, vector) vector of ylims determined by largest value in either ts or forecast
+  (ts, timeseries) result from myTimeseries
+  (forecast, named list) result from myForecast "
+  uppers <- c(max(ts, na.rm = T), max(forecast$upper, na.rm = T))
 
-myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pred.int) {
+  return(c(0, max(uppers)))
+}
+
+myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
   "RETURNS: (, figure) Generates forecast plot for one country (replicates timeseriesForecast.R)
   (loc, string) valid location (country)
   (ts.var, string) y-axis variable to plot
-  (ts.start, ymd) lubridate ymd object 
   (ts.end, ymd) lubridate ymd object
   (fore.type, string) forecasting model 
   (pred.int, int) days in the future to forecast. 
   "
 
   loc.data <- myCountry(source, loc)
-  ts.data <- myTimeseries(loc.data, ts.var, ts.start, ts.end)
-  data0 <- myTimeseries(loc.data, ts.var,ts.start, recent) #all data to plot as points
+  ts.data <- myTimeseries(loc.data, ts.var, ts.end)
+  data0 <- myTimeseries(loc.data, ts.var, recent.date(dataIn)) #all data to plot as points
   ts.forecast <- myForecast(ts.data, fore.type, pred.int)
 
   #out.fname <- paste(loc, var.name(ts.var), pred.int, "Day Forecast", sep=" ")
@@ -215,10 +218,11 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
   plot(ts.forecast,
      main="",
      ylab=var.name(ts.var),
-     xlim=c(date.day(ts.start), date.day(ts.end) + pred.int),
-     shadecols = c("#FFB1B1"),#, "grey70"), #color conf int.
+     xlim=c(date.day(find.start(loc.data, ts.var)), date.day(ts.end) + pred.int),
+     ylim=find.ylim(ts.data, ts.forecast),
+     shadecols = c("#FF7070"),#, "grey70"), #color conf int.
      xaxt='n', #hide x axis to label with months
-     fcol='black', #prediction line color
+     fcol=NA, #prediction line color
      type='p',
      col=NA,
      flty=2,
@@ -233,9 +237,9 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
 
   #data0.colors <- myColors(data0, "red","green")
   #points(data0,col=data0.colors,pch=19,cex=0.9)
-  lines(data0,type='h',lwd=3.0,col="#FF4545")
+  lines(data0,type='h',lwd=3.0,col="#413535")
 
-  moav <- ma(data0, order=2) 
+  moav <- ma(data0, order=7) 
   lines(moav,col='black',lwd=2) #plot moving average
 
   confLevel1<-ts.forecast$level[1] #confidence levels for creating legend automatically
@@ -244,9 +248,9 @@ myForecast.plot <- function(source, loc, ts.var, ts.start, ts.end, fore.type, pr
  #                 paste(confLevel2, "% Confidence",sep=""))
 
   legend("topleft", inset=0.05,
-        legend=c("Moving Average","Forecast", confLegend[1]),# ,confLegend[2]),
-        col=c("black",'black','#FFB1B1'),#,'grey70'),
-        lty=c(1,2,1),lwd=c(2,2,15),#,15),
+        legend=c("7 Day Average", confLegend[1]),# ,confLegend[2]),
+        col=c("black",'#FF7070'),#,'grey70'),
+        lty=c(1,1),lwd=c(2,15),#,15),
         title=loc, bg='transparent')
 }
 
