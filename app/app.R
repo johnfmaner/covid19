@@ -20,7 +20,7 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
                             Shiny.onInputChange("innerWidth", window.innerWidth);
                             });
                             ')),
-                  tags$h3("Inputs:"),
+                  tags$h3("Forecasting:"),
                   selectInput("loc", "Location:", myLocations,selected="Brazil",multiple=FALSE),
                   dateInput("ts.end", "End date (YYYY-MM-DD)",
                                 min = "2020-01-01",
@@ -31,8 +31,8 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
                  
                width=3), # sidebarPanel
                mainPanel(
-                            h4("Forecast Plot"),
-                            plotOutput("myForecast.plot"),
+                            plotOutput("myForecast.plot", hover='myForecast.hover', height='500'),
+                            TextOutput("myForecast.info"),
 
                width=9) # mainPanel
                
@@ -53,7 +53,9 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
                   selectInput("y", "Y", myVars, multiple = FALSE,selected = 'new_tests'),
                width=3), # sidebarPanel
                mainPanel(
-                         plotOutput("xy.plot", height="500"),
+                         plotOutput("xy.plot", height="500", hover='xy.hover'),
+                         TextOutput("xy.info"),
+
                width=9) # mainPanel
       ), # X-Y Plotting, tabPanel
 
@@ -116,19 +118,41 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
                     fore.type=input$fore.type, 
                     pred.int=input$pred.int)
     })
+        
+    output$myForecast.info <- renderText({
+    #https://shiny.rstudio.com/articles/plot-interaction.html   
+    xy_str <- function(e) {
+      if(is.null(e)) return("")
+      paste("Date: ", day.date(day.date(e$x)), "\n", var.name(input$ts.var),": ", floor(e$y), sep="")
+    }
+
+    xy_str(input$myForecast.hover)
+  })
 
     output$xy.plot <- renderPlot({
       mySource <- myCountry(dataIn, input$xy.loc)
       xy.plot(source = mySource, 
               x=input$x, y=input$y)
     })
+
+    output$xy.info <- renderText({
+    #https://shiny.rstudio.com/articles/plot-interaction.html   
+    xy_str <- function(e) {
+      if(is.null(e)) return("")
+      paste(var.name(input$x),": ", floor(e$x), "\n", var.name(input$y),": ", floor(e$y), sep="")
+    }
+
+    xy_str(input$xy.hover)
+  })
+
   } # server
 
   # Create Shiny object
   shinyApp(ui = ui, server = server)
 
-  mc<- myCountry(dataIn, "Romania")
-  mt<- myTimeseries(mc, "new_cases", recent)
-  mf <- myForecast(mt, "auto.arima", 30)
+#   keep for basic testing 
+#   mc<- myCountry(dataIn, "Romania")
+#   mt<- myTimeseries(mc, "new_cases", recent)
+#   mf <- myForecast(mt, "auto.arima", 30)
 
-plot(mf)
+# plot(mf)

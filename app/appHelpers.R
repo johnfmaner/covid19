@@ -47,6 +47,16 @@ date.day <- function(date) {
   return(as.integer(strftime(date, format="%j")))
 }
 
+day.date <- function(day) {
+  "
+  RETURNS: YMD corresponding to day of year, i.e 366 = '2020-12-31'
+  (day, int) day of year (note - R uses 0 origin for dates, so must pass day - 1 to as.Date)
+  eg. day.date(date.day('2020-02-29')) returns '2020-02-29'
+
+  "
+  as.Date(day - 1, origin="2020-01-01")
+}
+
 find.start<- function(source, var) {
   "
   RETURNS: (, date) date of first non zero value for a variable from owid-covid data (ideally from myCountry output)
