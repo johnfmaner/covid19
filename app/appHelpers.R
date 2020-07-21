@@ -79,13 +79,13 @@ find.start<- function(source, var) {
     } 
   }
   #check if start.val occurs before Jan1 to avoid first value being 365
-  #this SHOULDN'T happen, it's just out of abundance of caution  
-  if (year(start.val) != "2020") {
-    print("Defaulted to 2020-01-01 because start did not occur in 2020")
-    return(default)
-  } else {
-    return(start.val)
-  }
+
+  #   if (year(start.val) != "2019") {
+  #   print("Defaulted to 2020-01-01 because start did not occur in 2020")
+  #   return(default)
+  # } else {
+  #   return(start.val)
+  # }
 }
 
 recent.date <- function(source) {
@@ -156,7 +156,8 @@ myTimeseries <- function(source, var, stop) {
   (start, date) ymd('YYYY-MM-DD)' lubridate object for starting point of time series
   (stop, date) ymd('YYYY-MM-DD') lubrdiate object for stopping point of time series
   "
-  start.day <- date.day(find.start(source,var))
+  start.date <- find.start(source,var)
+  start.day <- date.day(start.date)
   end.day <- date.day(stop)
   
   if (start.day > end.day) {
@@ -164,7 +165,7 @@ myTimeseries <- function(source, var, stop) {
     stop(message)
   }
   
-  return(ts(subset(source[var], source$date <= stop & source$date >= start), 
+  return(ts(subset(source[var], source$date <= stop & source$date >= start.date), 
             start=start.day, 
             end=end.day))
 }

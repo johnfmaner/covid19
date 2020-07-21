@@ -208,5 +208,5 @@ shinyApp(ui = ui, server = server)
 # inp<-myTimeseries(myCountry(dataIn, "Brazil"), "new_cases", recent)
 # out<- myForecast(inp, "auto.arima", 30)
 
-# myForecast.plot(dataIn, "Mexico", "new_cases", recent, "auto.arima", 40)
+# myForecast.plot(dataIn, "United States", "total_cases", recent, "auto.arima", 20)
 # myForecast.plot()
