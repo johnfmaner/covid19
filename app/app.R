@@ -21,7 +21,7 @@ ui <- fluidPage(theme = shinytheme("paper"),
                             Shiny.onInputChange("innerWidth", window.innerWidth);
                             });
                             ')),
-                                      tags$h3("Forecasting:"),
+                                      tags$h3("Forecasting"),
                                       selectInput("loc", "Location", myLocations, selected="Brazil",multiple=FALSE),
                                       dateInput("ts.end", "End date (YYYY-MM-DD)",
                                                 value=recent,
@@ -39,32 +39,33 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                       width=9) # mainPanel
                                     
                            ), # Forecasting, tabPanel
-                           # tabPanel("Augmented Forecast",
-                           #          sidebarPanel(
-                           #            tags$head(tags$script('$(document).on("shiny:connected", function(e) {
-                           #                       Shiny.onInputChange("innerWidth", window.innerWidth);
-                           #                       });
-                           #                       $(window).resize(function(e) {
-                           #                       Shiny.onInputChange("innerWidth", window.innerWidth);
-                           #                       });
-                           #                       ')),
-                           #             tags$h3("Augmented Forecast:"),
-                           #             selectInput("loc.aug", "Location:", myLocations, selected="Brazil",multiple=FALSE),
-                           #             dateInput("ts.end.aug", "End date (YYYY-MM-DD)",
-                           #                           min = "2020-01-01",
-                           #                           max=recent),
-                           #             selectInput("ts.var.aug", "Variable", myVars.new,selected="new_cases",multiple=FALSE),
-                           #             selectInput("fore.type.aug", "Forecast Model", myFuns, multiple=FALSE),
-                           #             sliderInput("pred.int.aug", "Prediction Interval", min=1,max=30,value=10),
-                           # 
-                           #          width=3), # sidebarPanel
-                           #          mainPanel(
-                           #                       plotOutput("myAugmentedforecast.plot", hover='myAugmentedforecast.hover', height='500'),
-                           #                       #verbatimTextOutput("myAugmentedforecast.info"),
-                           # 
-                           #          width=9) # mainPanel
-                           # 
-                           # ), # Forecasting Performance, tabPanel
+                           tabPanel("Augmented Forecast",
+                                    sidebarPanel(
+                                      tags$head(tags$script('$(document).on("shiny:connected", function(e) {
+                                                 Shiny.onInputChange("innerWidth", window.innerWidth);
+                                                 });
+                                                 $(window).resize(function(e) {
+                                                 Shiny.onInputChange("innerWidth", window.innerWidth);
+                                                 });
+                                                 ')),
+                                       tags$h3("Augmented Forecast:"),
+                                       selectInput("aug.loc", "Location:", myLocations, selected="Brazil",multiple=FALSE),
+                                       dateInput("aug.ts.end", "End date (YYYY-MM-DD)",
+                                                    value=recent,
+                                                     min = "2020-01-01",
+                                                     max=recent),
+                                       selectInput("aug.ts.var", "Variable", myVars.new,selected="new_cases",multiple=FALSE),
+                                       selectInput("aug.fore.type", "Forecast Model", myFuns, multiple=FALSE),
+                                       sliderInput("aug.pred.int", "Prediction Interval", min=1,max=30,value=10),
+
+                                    width=3), # sidebarPanel
+                                    mainPanel(
+                                                 plotOutput("myAugmentedforecast.plot", hover='myAugmentedforecast.hover', height='500'),
+                                                 #verbatimTextOutput("myAugmentedforecast.info"),
+
+                                    width=9) # mainPanel
+
+                           ), # Forecasting Performance, tabPanel
                            
                            tabPanel("X-Y Plotting", 
                                     sidebarPanel(
@@ -160,24 +161,25 @@ server <- function(input, output, session) {
     xy_str(input$myForecast.hover)
   })
   
-  # output$myAugmentedforecast.plot <- renderPlot({
-  # myAugmentedforecast.plot(source=dataIn, 
-  #                           loc= input$aug.loc, 
-  #                           ts.var=input$aug.ts.var,
-  #                           ts.end=ymd(input$aug.ts.end), 
-  #                           fore.type=input$aug.fore.type, 
-  #                           pred.int=input$aug.pred.int)
-  # })
+  output$myAugmentedforecast.plot <- renderPlot({
+    myAugmentedforecast.plot(source=dataIn, 
+                    loc= input$aug.loc, 
+                    ts.var=input$aug.ts.var,
+                    ts.end=ymd(input$aug.ts.end), 
+                    fore.type=input$aug.fore.type, 
+                    pred.int=input$aug.pred.int)
+  })
   
-  #   output$myAugmentedforecast.info <- renderText({
-  #   #https://shiny.rstudio.com/articles/plot-interaction.html   
-  #   xy_str <- function(e) {
-  #     if(is.null(e)) return("")
-  #     paste("Date: ", day.date(day.date(e$x)), "\n", var.name(input$aug.ts.var),": ", floor(e$y), sep="")
-  #   }
+  output$myAugmentedforecast.info <- renderText({
+    #https://shiny.rstudio.com/articles/plot-interaction.html   
+    xy_str <- function(e) {
+      if(is.null(e)) return("")
+      paste("Date: ", day.date(e$x), "\n", var.name(aug.input$ts.var),": ", floor(e$y), sep="")
+    }
+    
+    xy_str(input$myAugmentedforecast.hover)
+  })
   
-  #   xy_str(input$myAugmentedforecast.hover)
-  # })
   
   output$xy.plot <- renderPlot({
     mySource <- myCountry(dataIn, input$xy.loc)
