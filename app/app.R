@@ -22,6 +22,7 @@ ui <- fluidPage(theme = shinytheme("paper"),
                             });
                             ')),
                                       tags$h3("Forecasting"),
+                                      p("Build a forecast according to your parameters."),
                                       selectInput("loc", "Location", myLocations, selected="Brazil",multiple=FALSE),
                                       dateInput("ts.end", "End date (YYYY-MM-DD)",
                                                 value=recent,
@@ -48,10 +49,12 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                                  Shiny.onInputChange("innerWidth", window.innerWidth);
                                                  });
                                                  ')),
-                                       tags$h3("Augmented Forecast:"),
+                                       tags$h3("Augmented Forecast"),
+                                        p("(Experimental): This method builds a forecast of total cases, total deaths, etc. based on the daily forecast
+                                          of the same variable. "),
                                        selectInput("aug.loc", "Location:", myLocations, selected="Brazil",multiple=FALSE),
                                        dateInput("aug.ts.end", "End date (YYYY-MM-DD)",
-                                                    value=recent,
+                                                    value="2020-07-01",
                                                      min = "2020-01-01",
                                                      max=recent),
                                        selectInput("aug.ts.var", "Variable", myVars.new,selected="new_cases",multiple=FALSE),
@@ -61,7 +64,7 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                     width=3), # sidebarPanel
                                     mainPanel(
                                                  plotOutput("myAugmentedforecast.plot", hover='myAugmentedforecast.hover', height='500'),
-                                                 #verbatimTextOutput("myAugmentedforecast.info"),
+                                                 verbatimTextOutput("myAugmentedforecast.info"),
 
                                     width=9) # mainPanel
 
@@ -76,10 +79,11 @@ ui <- fluidPage(theme = shinytheme("paper"),
                             Shiny.onInputChange("innerWidth", window.innerWidth);
                             });
                             ')),
-                                      tags$h3("X-Y Plotting:"),
+                                      tags$h3("X-Y Plotting"),
+                                      p("Generic X-Y plotting of any two variables."),
                                       selectInput("xy.loc", "Location", myLocations, selected='United States', multiple=FALSE),
-                                      selectInput("x", "X", myVars, multiple = FALSE,selected = 'new_cases'),
-                                      selectInput("y", "Y", myVars, multiple = FALSE,selected = 'new_tests'),
+                                      selectInput("x", "X", myVars, multiple = FALSE,selected = 'total_cases_per_million'),
+                                      selectInput("y", "Y", myVars, multiple = FALSE,selected = 'total_deaths_per_million'),
                                       width=3), # sidebarPanel
                                     mainPanel(
                                       plotOutput("xy.plot", height="500", hover='xy.hover'),
@@ -91,19 +95,22 @@ ui <- fluidPage(theme = shinytheme("paper"),
                            tabPanel(
                              "About",
                              sidebarPanel(
+                               h3("The Author"),
+                               p("I am a recent Texas A&M graduate currently residing in Orlando, FL. After graduating with a BSc. of Physics, 
+                               I began self learning the R language through online courses and this project. This project is the culmination of
+                               over 70+ hours of work and research, and aims to provide some insight into the complex problem that is COVID-19, 
+                               while allowing the user to explore trends on their own. The repository for this project can be found", 
+                                 a(href = 'https://github.com/johnfmaner/covid19', 'here'),"."),
+                               
                                HTML('<script type="text/javascript" src="https://platform.linkedin.com/badges/js/profile.js" async defer></script>'),
                                HTML("<center><div class=\"LI-profile-badge\"  data-version=\"v1\" data-size=\"large\" data-locale=\"en_US\" data-type=\"horizontal\" 
           data-theme=\"light\" data-vanity=\"johnfmaner\"><a class=\"LI-simple-link\" 
-          href=\'https://www.linkedin.com/in/johnfmaner?trk=profile-badge\'>John Maner</a></div></center>"),
-                               br(),
-                               br(),
+          href=\'https://www.linkedin.com/in/johnfmaner?trk=profile-badge\'>John Maner</a></div></center><br><br><br>"),
+
                                HTML('<center><iframe src="https://githubbadge.appspot.com/johnfmaner" style="border: 0;
-               height: 150px;width: 300px;overflow: hidden;" frameBorder="0"></iframe></center>'),
-                               br(),
-                               br(),
-                               br(),
-                               br(),
-                               position="left", width=5), #About, sidebarPanel
+               height: 150px;width: 300px;overflow: hidden;" frameBorder="0"></iframe></center><br><br><br><br><br><br><br><br><br><br><br><br><br><br>'),
+
+                               position="left", width=4), #About, sidebarPanel
                              
                              h5("DISCLAIMER"),
                              p("I do not claim to be an epidemiologist in any capacity. 
@@ -125,13 +132,9 @@ ui <- fluidPage(theme = shinytheme("paper"),
       A geographic subset of data is first created according to the specified country. This data is then formatted as a time series of one variable which
       starts at the first date in which the desired variable is greater than 0, and ends at the user specified date. A forecast is then built according to 
       the user selected forecasting model, and visualized. "),
-                             
-                             h5("The Creator"),
-                             p("I am a recent Texas A&M graduate currently residing in Orlando, FL. After graduating with a BSc. of Physics, I began self learning
-      the R language through online courses and this project. This project is the culmination of over 70+ hours of work and research, and 
-      aims to provide some insight into the complex problem that is COVID-19, while allowing the user to explore trends on their own.
-      The repository for this project can be found", 
-                               a(href = 'https://github.com/johnfmaner/covid19', 'here'),".")
+                             p("The augmented forecast is a forecast of total values built on the daily forecast of the corresponding variable. Although far
+                               from perfect, this method can significantly narrow the prediction confidence intervals.")
+
                            )# tabPanel About
                            
                            
@@ -174,12 +177,11 @@ server <- function(input, output, session) {
     #https://shiny.rstudio.com/articles/plot-interaction.html   
     xy_str <- function(e) {
       if(is.null(e)) return("")
-      paste("Date: ", day.date(e$x), "\n", var.name(aug.input$ts.var),": ", floor(e$y), sep="")
+      paste("Date: ", day.date(e$x), "\n", var.name(input$aug.ts.var),": ", floor(e$y), sep="")
     }
     
     xy_str(input$myAugmentedforecast.hover)
   })
-  
   
   output$xy.plot <- renderPlot({
     mySource <- myCountry(dataIn, input$xy.loc)
@@ -202,7 +204,9 @@ server <- function(input, output, session) {
 # Create Shiny object
 shinyApp(ui = ui, server = server)
 
-# source("~/Documents/projects/covid19/lightmode/appHelpers.R")
-# 
-# myForecast.plot(dataIn, "Brazil", "new_cases", ymd("2020-06-25"), "auto.arima", 40)
-# myAugmentedforecast.plot(dataIn, "Brazil", "new_cases", ymd("2020-06-25"), "auto.arima", 40)
+# source("~/Documents/projects/covid19/app/appHelpers.R")
+# inp<-myTimeseries(myCountry(dataIn, "Brazil"), "new_cases", recent)
+# out<- myForecast(inp, "auto.arima", 30)
+
+# myForecast.plot(dataIn, "Mexico", "new_cases", recent, "auto.arima", 40)
+# myForecast.plot()

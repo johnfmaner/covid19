@@ -20,10 +20,14 @@ myNames <- c("Total Cases","Daily New Cases","Total Deaths","Daily New Deaths","
 
 #forecast types and names 
 myFuns <-  c("auto.arima","ets","tbats")
-
+date.day("2020-04-15")
 #month days and names for drawing better axis 
-month.days = c(001,032,061,092,122,153,183,214,245,275,306,336)
-month.names = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+month.days = c(001,015,032,046,061,075,092,106,122,136,153,167,183,197,
+               214,228,245,259,275,279,306,320,336,350)
+month.names = c("Jan 1","Jan 15","Feb1 ","Feb  15","Mar 1","Mar 15","Apr 1",
+                  "Apr 15","May 1","May 15","Jun 1","Jun 15","Jul 1","Jul 15",
+                  "Aug 1","Aug 15","Sep 1","Sep 15","Oct 1","Oct 15","Nov 1",
+                  "Nov 15","Dec 1","Dec 15")
 
 # FUNCTIONS -----------------------------------------------------------
 
@@ -193,11 +197,11 @@ myAugmentedforecast <- function(dailyforecast, totalsource) {
                  start=total.end, 
                  end=total.end + pred.int)   
   
-  aug.upper <- ts(pred.start + dailyforecast[["upper"]][1], 
+  aug.upper <- ts(pred.start,# + dailyforecast[["upper"]][1], 
                   start=total.end, 
                   end=total.end + pred.int)        
   
-  aug.lower <- ts(pred.start + dailyforecast[["lower"]][1], 
+  aug.lower <- ts(pred.start,# + dailyforecast[["lower"]][1], 
                   start=total.end, 
                   end=total.end + pred.int)  
   
@@ -209,21 +213,11 @@ myAugmentedforecast <- function(dailyforecast, totalsource) {
   return(list(mean=aug.mean, upper=aug.upper, lower=aug.lower)) 
 }
 
-find.ylim <- function(ts, forecast) {
-  #TODO: This doesn't really work - the time series truncates at the start of the forecast interval. 
-  "RETURNS: (, vector) vector of ylims determined by largest value in either ts or forecast
-  (ts, timeseries) result from myTimeseries
-  (forecast, named list) result from myForecast "
-  uppers <- c(max(ts, na.rm = TRUE), max(forecast$mean, na.rm = TRUE))
-  
-  return(c(0, max(uppers)))
-}
-
 myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
   "RETURNS: (, figure) Generates forecast plot for one country (replicates timeseriesForecast.R)
   (loc, string) valid location (country)
   (ts.var, string) y-axis variable to plot
-  (ts.end, ymd) lubridate ymd object
+  (ts.end, ymd)  ymd object
   (fore.type, string) forecasting model 
   (pred.int, int) days in the future to forecast. 
   "
@@ -240,8 +234,8 @@ myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
   plot(ts.forecast,
        main="",
        ylab=var.name(ts.var),
-       xlim=c(date.day(find.start(loc.data, ts.var)), date.day(ts.end) + pred.int),
-       ylim=find.ylim(data0, ts.forecast),
+       xlim=c(start(data0)[1], date.day(ts.end) + pred.int),
+       ylim=c(0, max(ts.forecast$upper, replace(data0, is.na(data0), 0))),
        shadecols = c("#AFD9FF"), #color conf int.
        xaxt='n', #hide x axis to label with months
        fcol=NA, #prediction line color
@@ -251,7 +245,7 @@ myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
        showgap=FALSE, #draw prediction intervals from ts.end = FALSE. 
        las=1,
   )
-  axis(1, labels=month.names,at=month.days)#,font=2) #create axis with months.
+  axis(1, labels=month.names,at=month.days) #create axis with months.
   abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)
   
   abline(0,0)
@@ -261,13 +255,10 @@ myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
   moav <- ma(data0, order=7) 
   lines(moav,col='#2F608A',lwd=4) #plot moving average
   
-  confLevel1<-ts.forecast$level[1] #confidence levels for creating legend automatically
-  confLegend <- c(paste(confLevel1, "% Confidence",sep=""))
-  
   legend("topleft", inset=0.05,
-         legend=c("7 Day Average", confLegend[1]),# ,confLegend[2]),
-         col=c("#2F608A",'#AFD9FF'),#,'grey70'),
-         lty=c(1,1),lwd=c(2,15),#,15),
+         legend=c("7 Day Average", "95% Confidence"),
+         col=c("#2F608A",'#AFD9FF'),
+         lty=c(1,1),lwd=c(2,15),
          title=loc, bg='transparent')
 }
 
@@ -295,14 +286,34 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
   xp<-c(seq(date.day(ts.end),date.day(ts.end) + pred.int),
         seq(date.day(ts.end) + pred.int,date.day(ts.end)))
   yp<-c(ma$upper,rev(ma$lower))
-  plot(xp,yp,col=NA,xaxt='n')
-  axis(1, labels=month.names,at=month.days)#,font=2) #create axis with months.
+  plot(data0,
+       col=NA,
+       xaxt='n',
+       ylab=var.name(new2total(ts.var)),
+       xlab=NA,
+       type='h',
+       lwd=3,
+       las=1,
+       xlim=c(start(data0)[1], max(xp, end(data0)[1])),
+       ylim=c(0, max(yp, replace(data0, is.na(data0), 0)))
+       )
+  axis(1, labels=month.names,at=month.days)
   
-  #draw confidence intervals 
-  polygon(xp,yp,col='#AFD9FF',border=NA)
-  lines(ma$mean,col='#2F608A',lwd=3) #confidence interval mean
-  lines(data0, col='grey15', lwd=3, type='h')
-}
+  polygon(xp,yp,col='#AFD9FF',border=NA)  #draw confidence intervals 
+
+  abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)#end of prediction
+  abline(0,0) #x axis
+  
+  moav <- ma(data0, order=7) 
+  lines(moav,col='#2F608A',lwd=4) #plot moving average
+  lines(data0,col='grey15',lwd=3,type='h') #plot values again to plot over conf intervals 
+  
+  legend("topleft", inset=0.05,
+         legend=c("7 Day Average", "95% Confidence"),
+         col=c("#2F608A",'#AFD9FF'),
+         lty=c(1,1),lwd=c(2,15),
+         title=loc, bg='transparent')}
+  
 
 xy.plot <- function(source, x, y) {
   "RETURNS (, xy plot) Generic X-Y plot for two variables
@@ -317,7 +328,7 @@ xy.plot <- function(source, x, y) {
        xlab = var.name(x),
        ylab= var.name(y), 
        type='p',
-       col='grey15',
-       cex=2,
+       col=rgb(0.3,0.3,0.3,alpha=0.8),
+       cex=1.2,
        pch=19)
 }
