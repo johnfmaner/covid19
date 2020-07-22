@@ -127,6 +127,38 @@ new2total <- function(new) {
   return(gsub("^new?", "total", new))
 }
 
+forecast.errors <- function(source, forecast) {
+  "RETURNS: (, ts) Ts of residuals for a forecast mean against OBSERVED data
+  (source, list) univariate timeseries from myTimeseries
+  (forecast, list) timeseries forecast from myForecast
+  "
+  
+  fore.start <- start(forecast$mean)[1]
+  fore.end <- end(forecast$mean)[1]
+  ts.start <- start(source)[1]
+  
+  resid <- c()
+  for (i in seq(fore.start, fore.end)) {
+    resid[i+1-fore.start] <- source[i + 1 - ts.start] - forecast$mean[i + 1 - fore.start]
+  }
+  return(ts(resid, start=fore.start, end=fore.end))
+}
+
+sum.sq <- function(source) {
+  "RETURNS (, float) sum of squares of a univariate list 
+  (source, list) univariate list of numbers 
+  "
+  
+  return(sum(source * source))
+}
+
+root.mean.sq <- function(source) {
+  "RETURNS (, float) mean square of a univariate list
+  (source, list) univariate list of numbers"
+  
+  return(sqrt(mean(source*source)))
+}
+
 myCountry <- function(source, loc) {
   "
   RETURNS: (,named list) Subset of input data (source) filtered by location
@@ -164,10 +196,12 @@ myTimeseries <- function(source, var, stop) {
     message <- paste("Error:",start,"occured before",stop,sep=" ")
     stop(message)
   }
-  
-  return(ts(subset(source[var], source$date <= stop & source$date >= start.date), 
+  ts.out <- ts(subset(source[var], source$date <= stop & source$date >= start.date), 
             start=start.day, 
-            end=end.day))
+            end=end.day)
+  ts.out[ts.out<0] <- 0 #assign negative numbers to 0
+  
+  return(na.contiguous(ts.out))
 }
 
 myForecast <- function(source, type, predInt) {
@@ -265,6 +299,7 @@ myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
 
 myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
   "RETURNS: (, figure) Generates augmented forecast plot for one country (replicates timeseriesForecast.R)
+  (source, named list) OWID COVID data 
   (loc, string) valid location (country)
   (ts.var, string) y-axis variable to plot
   (ts.end, ymd) lubridate ymd object
@@ -278,15 +313,14 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
   totalsource<- myTimeseries(myCountry(dataIn, loc), new2total(ts.var), ts.end)
   ma <- myAugmentedforecast(mf, totalsource)
   data0 <- myTimeseries(mc, new2total(ts.var), recent.date(dataIn))
-  recent <- recent.date(dataIn)
   
   #forecast interval plot 
   par(mar = c(6.5, 6.5, 0.5, 0.5), mgp = c(5, 1, 0),
       cex=1.2, font=2)
   
-  xp<-c(seq(date.day(ts.end),date.day(ts.end) + pred.int),
+  conf.x<-c(seq(date.day(ts.end),date.day(ts.end) + pred.int),
         seq(date.day(ts.end) + pred.int,date.day(ts.end)))
-  yp<-c(ma$upper,rev(ma$lower))
+  conf.y<-c(ma$upper,rev(ma$lower))
   plot(data0,
        col=NA,
        xaxt='n',
@@ -295,12 +329,12 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
        type='h',
        lwd=3,
        las=1,
-       xlim=c(start(data0)[1], max(xp, end(data0)[1])),
-       ylim=c(0, max(yp, replace(data0, is.na(data0), 0)))
+       xlim=c(start(data0)[1], max(conf.x, end(data0)[1])),
+       ylim=c(0, max(conf.y, replace(data0, is.na(data0), 0)))
        )
   axis(1, labels=month.names,at=month.days)
   
-  polygon(xp,yp,col='#AFD9FF',border=NA)  #draw confidence intervals 
+  polygon(conf.x,conf.y,col='#AFD9FF',border=NA)  #draw confidence intervals 
 
   abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)#end of prediction
   abline(0,0) #x axis
@@ -314,7 +348,7 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
          col=c("#2F608A",'#AFD9FF'),
          lty=c(1,1),lwd=c(2,15),
          title=loc, bg='transparent')}
-  
+
 
 xy.plot <- function(source, x, y) {
   "RETURNS (, xy plot) Generic X-Y plot for two variables

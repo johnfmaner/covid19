@@ -11,7 +11,7 @@ options(scipen=999) #(try to) disable scientific notation for prettier plots
 
 # Define UI
 ui <- fluidPage(theme = shinytheme("paper"),
-                navbarPage("COVID-19 Data Visualization", 
+                navbarPage("COVID-19 Forecasting", 
                            tabPanel("Forecasting",
                                     sidebarPanel(
                                       tags$head(tags$script('$(document).on("shiny:connected", function(e) {
@@ -117,23 +117,24 @@ ui <- fluidPage(theme = shinytheme("paper"),
       This work in no way claims to account for easing of stay-at-home mandates, social distancing, face covering usage, and other factors.
       This project is simply a self learning experiment with time series forecasting models in R, which know nothing about epidemiology. 
       Despite being derived from official data sources, any predictions produced by this work are NOT to be taken as official predictions."),
-                             p("Additionally: OWID data includes corrections from official sources, which may appear as negative values when viewing new cases, new tests, 
-      new deaths, etc. Currently, these values remain unchanged, which may affect the performance of the forecast model."),
+                             p("Additionally: OWID data includes corrections from official sources, which may appear as negative values when viewing new cases,
+                             new tests,       new deaths, etc. Currently, these values remain unchanged, which may affect the performance of the forecast model."),
                              
                              h5("Data"), 
                              p("This project utilizes the Our World in Data (OWID) source data, which can be found directly at 
       the", a(href = 'https://ourworldindata.org/coronavirus-source-data/', 'OWID Website'),".
       OWID data is entirely open source and includes extensive documentation regarding their sources and methods."),
-                             HTML('<iframe src="https://ourworldindata.org/grapher/how-recent-is-the-latest-testing-data-for-each-country-last-update" 
-           loading="lazy" style="width: 50%; height: 400px; border: 0px none;"></iframe>'),
+                             HTML('<center><iframe src="https://ourworldindata.org/grapher/how-recent-is-the-latest-testing-data-for-each-country-last-update" 
+           loading="lazy" style="width: 50%; height: 400px; border: 0px none;"></iframe></center>'),
                              
                              h5("Methods"),
-                             p("Forecasted values are calculated using the", a(href = 'https://cran.r-project.org/web/packages/forecast/index.html', 'forecast'), "package in R. 
+                             p("Forecasted values are calculated using the", 
+                             a(href = 'https://cran.r-project.org/web/packages/forecast/index.html', 'forecast'), "package in R. 
       A geographic subset of data is first created according to the specified country. This data is then formatted as a time series of one variable which
       starts at the first date in which the desired variable is greater than 0, and ends at the user specified date. A forecast is then built according to 
       the user selected forecasting model, and visualized. "),
-                             p("The augmented forecast is a forecast of total values built on the daily forecast of the corresponding variable. Although far
-                               from perfect, this method can significantly narrow the prediction confidence intervals.")
+                             p("The augmented forecast is a forecast of total values built on the daily forecast of the corresponding variable. 
+                             Although far from perfect, this method can significantly narrow the prediction confidence intervals.")
 
                            )# tabPanel About
                            
@@ -193,7 +194,7 @@ server <- function(input, output, session) {
     #https://shiny.rstudio.com/articles/plot-interaction.html   
     xy_str <- function(e) {
       if(is.null(e)) return("")
-      paste(var.name(input$x),": ", floor(e$x), "\n", var.name(input$y),": ", floor(e$y), sep="")
+      paste(var.name(input$x),": ", floor(e$x), "\n", new2total(var.name(input$y)),": ", floor(e$y), sep="")
     }
     
     xy_str(input$xy.hover)
@@ -204,9 +205,3 @@ server <- function(input, output, session) {
 # Create Shiny object
 shinyApp(ui = ui, server = server)
 
-# source("~/Documents/projects/covid19/app/appHelpers.R")
-# inp<-myTimeseries(myCountry(dataIn, "Brazil"), "new_cases", recent)
-# out<- myForecast(inp, "auto.arima", 30)
-
-# myForecast.plot(dataIn, "United States", "total_cases", recent, "auto.arima", 20)
-# myForecast.plot()
