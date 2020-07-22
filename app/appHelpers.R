@@ -1,9 +1,14 @@
 library(forecast) #moving average, forecasting
 library(lubridate) #working with dates
 library(stats) #linear models
+library(shiny)
+library(shinythemes)
+#source("appHelpers.R")
+options(shiny.reactlog = TRUE)
+dataIn <- read.csv("~/Documents/projects/covid19/app/owid-covid.csv")
 
 #DATA -----------------------------------------------------------
-myLocations <- source("~/Documents/projects/covid19/data/myLocations.R")
+myLocations <- source("~/Documents/projects/covid19/app/myLocations.R")
 
 #available variables and names 
 myVars<- c("total_cases","new_cases","total_deaths","new_deaths",
@@ -20,7 +25,6 @@ myNames <- c("Total Cases","Daily New Cases","Total Deaths","Daily New Deaths","
 
 #forecast types and names 
 myFuns <-  c("auto.arima","ets","tbats")
-date.day("2020-04-15")
 #month days and names for drawing better axis 
 month.days = c(001,015,032,046,061,075,092,106,122,136,153,167,183,197,
                214,228,245,259,275,279,306,320,336,350)
@@ -266,35 +270,39 @@ myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
   par(mar = c(6.5, 6.5, 0.5, 0.5), mgp = c(5, 1, 0),
       cex=1.2, font=2)
   
-  plot(ts.forecast,
-       main="",
-       ylab=var.name(ts.var),
-       xlim=c(start(data0)[1], date.day(ts.end) + pred.int),
-       ylim=c(0, max(ts.forecast$upper, replace(data0, is.na(data0), 0))),
-       shadecols = c("#AFD9FF"), #color conf int.
-       xaxt='n', #hide x axis to label with months
-       fcol=NA, #prediction line color
-       type='p',
+  x.seq <- seq(date.day(ts.end) +1 ,date.day(ts.end) + pred.int)
+  
+  conf.x<-c(x.seq, rev(x.seq))
+  conf.y<-c(ts.forecast$upper,rev(ts.forecast$lower))
+  
+  plot(data0,
        col=NA,
-       flty=2,
-       showgap=FALSE, #draw prediction intervals from ts.end = FALSE. 
+       xaxt='n',
+       ylab=var.name(ts.var),
+       xlab=NA,
+       type='h',
+       lwd=3,
        las=1,
+       xlim=c(start(data0)[1], date.day(ts.end) + pred.int),
+       ylim=c(0, max(conf.y, replace(data0, is.na(data0), 0)))
   )
-  axis(1, labels=month.names,at=month.days) #create axis with months.
-  abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)
+
+  polygon(conf.x,conf.y,col='#AFD9FF',border=NA)  #draw confidence intervals 
   
-  abline(0,0)
-  
-  lines(data0,type='h',lwd=3.0,col="grey15")
+  abline(v=date.day(ts.end) + pred.int ,col='grey50',lty=2,lwd=2)#end of prediction
+  abline(0,0) #x axis
   
   moav <- ma(data0, order=7) 
   lines(moav,col='#2F608A',lwd=4) #plot moving average
-  
+  lines(data0,col='grey15',lwd=3,type='h') #plot values again to plot over conf intervals 
+  lines(ts.forecast$mean, col="#FF9B56", lty=2, lwd=4)
   legend("topleft", inset=0.05,
-         legend=c("7 Day Average", "95% Confidence"),
-         col=c("#2F608A",'#AFD9FF'),
-         lty=c(1,1),lwd=c(2,15),
+         legend=c("7 Day Average", "95% Confidence","Forecast Mean"),
+         col=c("#2F608A",'#AFD9FF',"#FF9B56"),
+         lty=c(1,1,2),lwd=c(4,15,4),
          title=loc, bg='transparent')
+  axis(1, labels=month.names,at=month.days)
+  
 }
 
 myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
@@ -311,7 +319,7 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
   mt<- myTimeseries(mc, ts.var, ts.end)
   mf <- myForecast(mt, fore.type, pred.int)
   totalsource<- myTimeseries(myCountry(dataIn, loc), new2total(ts.var), ts.end)
-  ma <- myAugmentedforecast(mf, totalsource)
+  mag <- myAugmentedforecast(mf, totalsource)
   data0 <- myTimeseries(mc, new2total(ts.var), recent.date(dataIn))
   
   #forecast interval plot 
@@ -320,7 +328,8 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
   
   conf.x<-c(seq(date.day(ts.end),date.day(ts.end) + pred.int),
         seq(date.day(ts.end) + pred.int,date.day(ts.end)))
-  conf.y<-c(ma$upper,rev(ma$lower))
+  conf.y<-c(mag$upper,rev(mag$lower))
+  
   plot(data0,
        col=NA,
        xaxt='n',
@@ -329,10 +338,9 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
        type='h',
        lwd=3,
        las=1,
-       xlim=c(start(data0)[1], max(conf.x, end(data0)[1])),
+       xlim=c(start(data0)[1], date.day(ts.end) + pred.int),
        ylim=c(0, max(conf.y, replace(data0, is.na(data0), 0)))
        )
-  axis(1, labels=month.names,at=month.days)
   
   polygon(conf.x,conf.y,col='#AFD9FF',border=NA)  #draw confidence intervals 
 
@@ -342,12 +350,14 @@ myAugmentedforecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pre
   moav <- ma(data0, order=7) 
   lines(moav,col='#2F608A',lwd=4) #plot moving average
   lines(data0,col='grey15',lwd=3,type='h') #plot values again to plot over conf intervals 
-  
+  lines(mag$mean, col="#FF9B56", lty=2, lwd=4)
   legend("topleft", inset=0.05,
-         legend=c("7 Day Average", "95% Confidence"),
-         col=c("#2F608A",'#AFD9FF'),
-         lty=c(1,1),lwd=c(2,15),
-         title=loc, bg='transparent')}
+         legend=c("7 Day Average", "95% Confidence","Forecast Mean"),
+         col=c("#2F608A",'#AFD9FF',"#FF9B56"),
+         lty=c(1,1,2),lwd=c(4,15,4),
+         title=loc, bg='transparent')
+  axis(1, labels=month.names,at=month.days)
+  }
 
 
 xy.plot <- function(source, x, y) {
