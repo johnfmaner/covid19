@@ -1,14 +1,16 @@
 library(forecast) #moving average, forecasting
 library(lubridate) #working with dates
 library(stats) #linear models
-library(shiny)
-library(shinythemes)
-#source("appHelpers.R")
+library(shiny) #shiny
+library(shinythemes) #prettier 
+
+#setwd("~/Documents/projects/covid19/app/") #only for development use
+
 options(shiny.reactlog = TRUE)
-dataIn <- read.csv("~/Documents/projects/covid19/app/owid-covid.csv")
+dataIn <- read.csv("owid-covid.csv")
 
 #DATA -----------------------------------------------------------
-myLocations <- source("~/Documents/projects/covid19/app/myLocations.R")
+myLocations <- source("myLocations.R")
 
 #available variables and names 
 myVars<- c("total_cases","new_cases","total_deaths","new_deaths",

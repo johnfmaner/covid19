@@ -1,7 +1,7 @@
-source("~/Documents/projects/covid19/app/appHelpers.R")
-#hard coded for the time being. 
-recent <- recent.date(dataIn)
+#setwd("~/Documents/projects/covid19/app/") #only for development use
+source("appHelpers.R")
 options(scipen=999) #(try to) disable scientific notation for prettier plots
+recent <- recent.date(dataIn)
 
 # Define UI
 ui <- fluidPage(theme = shinytheme("paper"),
@@ -19,12 +19,12 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                       p("Build a forecast according to your parameters."),
                                       selectInput("loc", "Location", myLocations, selected="Brazil",multiple=FALSE),
                                       dateInput("ts.end", "End date (YYYY-MM-DD)",
-                                                value=recent,
+                                                value="2020-07-01",
                                                 min = "2020-01-15",
                                                 max=recent),
-                                      selectInput("ts.var", "Variable", myVars,selected="new_cases",multiple=FALSE),
+                                      selectInput("ts.var", "Variable", myVars,selected="total_cases",multiple=FALSE),
                                       selectInput("fore.type", "Forecast Model", myFuns,multiple=FALSE),
-                                      sliderInput("pred.int", "Prediction Interval", min=1,max=30,value=7),
+                                      sliderInput("pred.int", "Prediction Interval", min=1,max=30,value=21),
                                       
                                       width=3), # sidebarPanel
                                     mainPanel(
@@ -49,11 +49,11 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                        selectInput("aug.loc", "Location:", myLocations, selected="Brazil",multiple=FALSE),
                                        dateInput("aug.ts.end", "End date (YYYY-MM-DD)",
                                                     value="2020-07-01",
-                                                     min = "2020-01-01",
+                                                     min = "2020-01-15",
                                                      max=recent),
                                        selectInput("aug.ts.var", "Variable", myVars.new,selected="new_cases",multiple=FALSE),
                                        selectInput("aug.fore.type", "Forecast Model", myFuns, multiple=FALSE),
-                                       sliderInput("aug.pred.int", "Prediction Interval", min=1,max=30,value=10),
+                                       sliderInput("aug.pred.int", "Prediction Interval", min=1,max=30,value=21),
 
                                     width=3), # sidebarPanel
                                     mainPanel(
@@ -90,10 +90,10 @@ ui <- fluidPage(theme = shinytheme("paper"),
                              "About",
                              sidebarPanel(
                                h3("The Author"),
-                               p("I am a recent Texas A&M graduate currently residing in Orlando, FL. After graduating with a BSc. of Physics, 
-                               I began self learning the R language through online courses and this project. This project is the culmination of
-                               over 70+ hours of work and research, and aims to provide some insight into the complex problem that is COVID-19, 
-                               while allowing the user to explore trends on their own. The repository for this project can be found", 
+                               p("I am a recent Texas A&M graduate currently residing in Orlando, FL. After graduating with a BSc. of Physics in May, 
+                               I began self learning R through online courses and this project. This project is the culmination of
+                               over 80+ hours of work and research, and aims to provide some insight into the complex problem that is COVID-19, 
+                               while allowing the user to explore trends on their own. The Github repository for this project can be found", 
                                  a(href = 'https://github.com/johnfmaner/covid19', 'here'),"."),
                                
                                HTML('<script type="text/javascript" src="https://platform.linkedin.com/badges/js/profile.js" async defer></script>'),
@@ -106,29 +106,35 @@ ui <- fluidPage(theme = shinytheme("paper"),
 
                                position="left", width=4), #About, sidebarPanel
                              
-                             h5("DISCLAIMER"),
-                             p("I do not claim to be an epidemiologist in any capacity. 
-      This work in no way claims to account for easing of stay-at-home mandates, social distancing, face covering usage, and other factors.
-      This project is simply a self learning experiment with time series forecasting models in R, which know nothing about epidemiology. 
+                             h5("A Disclaimer"),
+                             p("I do not claim to be an epidemiologist in any capacity!  
+      This work in no way claims to account for easing of stay-at-home mandates, social distancing, usage of face coverings, and other factors.
+      This project is simply a self learning experiment with basic time series forecasting models in R, which know nothing about epidemiology. 
       Despite being derived from official data sources, any predictions produced by this work are NOT to be taken as official predictions."),
                              p("Additionally: OWID data includes corrections from official sources, which may appear as negative values when viewing new cases,
-                             new tests,       new deaths, etc. Currently, these values remain unchanged, which may affect the performance of the forecast model."),
+                             new tests, new deaths, etc. Currently, any negative value is set to 0 to improve forecast performance."),
+                             
                              
                              h5("Data"), 
                              p("This project utilizes the Our World in Data (OWID) source data, which can be found directly at 
-      the", a(href = 'https://ourworldindata.org/coronavirus-source-data/', 'OWID Website'),".
-      OWID data is entirely open source and includes extensive documentation regarding their sources and methods."),
+                              the", a(href = 'https://ourworldindata.org/coronavirus-source-data/', 'OWID Website'),".
+                              OWID data is entirely open source and includes extensive documentation regarding their sources and methods. Below is an 
+                              interactive courtesy of OWIDw hich displays how recent the testing data for each country is. Countries with old or no 
+                              testing data are not guaranteed to work well in this application."),
                              HTML('<center><iframe src="https://ourworldindata.org/grapher/how-recent-is-the-latest-testing-data-for-each-country-last-update" 
            loading="lazy" style="width: 50%; height: 400px; border: 0px none;"></iframe></center>'),
                              
                              h5("Methods"),
                              p("Forecasted values are calculated using the", 
                              a(href = 'https://cran.r-project.org/web/packages/forecast/index.html', 'forecast'), "package in R. 
-      A geographic subset of data is first created according to the specified country. This data is then formatted as a time series of one variable which
-      starts at the first date in which the desired variable is greater than 0, and ends at the user specified date. A forecast is then built according to 
+      A geographic subset of data is first created according to the specified country. This data is then formatted as a time series of one variable composed of
+      the longest contigous portion of data, starting at the first non zero value for the variable, and ends at the user specified date. A forecast is then built according to 
       the user selected forecasting model, and visualized. "),
-                             p("The augmented forecast is a forecast of total values built on the daily forecast of the corresponding variable. 
-                             Although far from perfect, this method can significantly narrow the prediction confidence intervals.")
+                             p("The augmented forecast is an experimental forecast of total values built on the daily forecast of the corresponding variable. 
+                             Although far from perfect, this method can significantly narrow the prediction confidence intervals, and in some cases, produces 
+                               more accurate results than directly forecasting the total counts. To reiterate, this method is completely experimental, and *may
+                               be overfitting the data. I am continuing to learn about timeseries forecasting and forecasting diagnostics, and will continue to
+                               update this project with some diagnostics until satisfied. ")
 
                            )# tabPanel About
                            
