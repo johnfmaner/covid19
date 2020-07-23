@@ -18,7 +18,7 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                       tags$h3("Forecasting"),
                                       p("Build a forecast according to your parameters."),
                                       selectInput("loc", "Location", myLocations, selected="Brazil",multiple=FALSE),
-                                      dateInput("ts.end", "End date (YYYY-MM-DD)",
+                                      dateInput("ts.end", "Forecast Start (YYYY-MM-DD)",
                                                 value="2020-07-01",
                                                 min = "2020-01-15",
                                                 max=recent),
@@ -47,7 +47,7 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                         p("(Experimental): This method builds a forecast of total cases, total deaths, etc. based on the daily forecast
                                           of the same variable. "),
                                        selectInput("aug.loc", "Location:", myLocations, selected="Brazil",multiple=FALSE),
-                                       dateInput("aug.ts.end", "End date (YYYY-MM-DD)",
+                                       dateInput("aug.ts.end", "Forecast Start (YYYY-MM-DD)",
                                                     value="2020-07-01",
                                                      min = "2020-01-15",
                                                      max=recent),
@@ -220,3 +220,4 @@ shinyApp(ui = ui, server = server)
 # lines(myTimeseries(myCountry(dataIn, "Brazil"), "total_cases", recent),type='h')
 # 
 #       
+

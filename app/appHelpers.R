@@ -7,7 +7,10 @@ library(shinythemes) #prettier
 #setwd("~/Documents/projects/covid19/app/") #only for development use
 
 options(shiny.reactlog = TRUE)
-dataIn <- read.csv("owid-covid.csv")
+#dataIn <- read.csv("~/Documents/projects/covid19/data/owid-covid.csv") #only for local development use
+owid.url <- "https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv?raw=true"
+dataIn <- read.csv(owid.url) #load owid-covid data directly from github repository  
+
 
 #DATA -----------------------------------------------------------
 myLocations <- source("myLocations.R")
