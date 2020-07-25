@@ -204,20 +204,4 @@ server <- function(input, output, session) {
 
 # Create Shiny object
 shinyApp(ui = ui, server = server)
-# 
-# test <- myTimeseries(myCountry(dataIn, "Brazil"), "total_cases", day.date(174))
-# fcast<- myForecast(test, "auto.arima", 30)
-# date.day(day.date(date.day(recent) - 30))
-# xp<- c(seq(174 + 1, 174 + 30), seq(174 + 30, 174+1))
-# yp<- c(fcast$upper, rev(fcast$lower))
-# 
-# length(xp)
-# length(yp)
-# 
-# plot(fcast$mean,xlim=c(170,210),ylim=c(1000000,3000000))
-# polygon(xp,yp,col='#AFD9FF',border=NA)
-# lines(fcast$mean, lty=2)
-# lines(myTimeseries(myCountry(dataIn, "Brazil"), "total_cases", recent),type='h')
-# 
-#       
 
