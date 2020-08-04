@@ -1,71 +1,82 @@
-# Time series analysis of COVID19 data using R. 
+# Forecast Diagnostics 
 
-[![Example figure](figures/shinyapp.png)](https://johnfmaner.shinyapps.io/covid19/)
+This project features what I call an "augmented forecast". The "augmented forecast is built as follows:
 
-**https://johnfmaner.shinyapps.io/covid19/** 
+1. Choose the cumulative variable you would like to forecast (e.g `total_cases`). 
+2. Build a forecast of the corresponding daily variable, (eg. `new_cases`) with `myForecast`. 
+3. Initialize a time series in which all values are the last value of the cumulative variable at the time in which the forecast begins. 
+4. Add the daily forecast mean to the first value of the time series created above. 
+5. Iterate over the range of the forecast horizon. 
 
-This project is a self learning experiment with time series forecasting models in R. The long term goal of this project is to build a Rshiny dashboard to forecast parameters related to the COVID-19 pandemic.  
-
-DISCLAIMER: I do not claim to be an epidemiologist in any capacity. This work in no way claims to account for easing of stay-at-home mandates, social distancing, mask usage, and other factors. 
-
-**Clone this repository:**
-
-`git clone https://github.com/johnfmaner/covid19`
-
-## Contents 
-
-### /app 
-Files necessary to create and host the shiny app. Data is loaded remotely from the OWID Github repo (see below). 
-
-### /data
-This project uses the Our World In Data COVID19 data found on Github: (https://github.com/owid/covid-19-data) or the official website (https://ourworldindata.org/coronavirus-source-data). 
-
-This folder includes a bash script to download the most recent data release. This data includes 212 unique locations, so it may be easily adapted to other countries or continents. Additionally, the data may be directly downloaded in R using the helper function `download.owid(download.dir, file.name)`
-
-### /figures
-Sample figures of forecasting daily new cases and total cases of COVID19 in multiple countries. 
-
-### timeseriesHelpers.R
-Helper functions to download data, create time series, subsets by country, and generate forecast values over an interval with a specified model. 
-
-### timeseriesForecast.R
-Loads owid_covid.csv data and performs forecasting for specified country. One can specify the time series start and end points, forecasting model, and country. 
-
-### timeseriesComparison.R
-Compares forecasts built on total cases and daily new cases. 
-
-A bare minimum example: 
-
-**Perform 30 day ARIMA Forecast for Brazil on daily new cases from 01-01-2020 to 07-02-2020 using timeseriesHelpers.R:** 
+In psuedo code, step 5 looks something like:
 
 ```
-myDir <- "~/Documents/projects/covid/" #specify your directory
-setwd(myDir)
+augmented.mean <- ts(last value of cumulative variable, 
+                     start=end of timeseries forecast is built on)
 
-library(forecast) #moving average, forecasting
-library(lubridate) #working with dates
-source("timeseriesHelpers.R") #load helper functions
-
-myData <- paste(myDir, "data/",sep="")
-myFile <- "owid-covid.csv"
-
-download.owid(myData, myFile)
-dataIn <- read.csv(paste(myData, myFile, sep=""), header=TRUE)
-
-covid <- myCountry(dataIn, "Brazil")
-data <- myTimeseries(covid, "new_cases", ymd("2020-01-01"), ymd("2020-07-02"))
-
-Fcast <- myForecast(source=data, type="arima", predInt=30)
-plot(Fcast)
+for (i in seq(1:forecast horizon){
+  augmented.mean[i+1] <- augmented.mean[i] + dailyforecast.mean[i]
+ }
+```
+A complete example using helper functions looks like:
 
 ```
+source("appHelpers.R")
+mc <- myCountry(dataIn, "Brazil")
+mdt <- myTimeseries(mc, "new_cases", "2020-07-01")
+mtt <- myTimeseries(mc, "total_cases", "2020-07-01")
 
+mdf <- myForecast(mdt, "auto.arima", 30)
+mtf <- myForecast(mtt, "auto.arima", 30)
 
-## To do
-- [x] Create bash script to download data directly from OWID website. 
-- [X] Easily swap between country and forecasting models
-- [X] Add helper functions (ongoing) . 
-- [X] Build cumulative forecast from daily forecasts. (augmented forecast) 
-- [X] Build shiny dashboard! Yay! 
-- [ ] Add plot interactivity (plotly)
-- [ ] Add forecast diagnostics, compare performance between regular and augmented forecast methdods. 
+maf <- myAugmentedforecast(mdf, mtt)
+
+plot(maf$mean, type='l')
+lines(maf$lower, lty=2)
+lines(maf$upper, lty=2)
+```
+
+The augmented forecast was made to provide a more accurate forecast of cumulative variables. To test this, a forecast of a cumulative variable and an "augmented forecast" of the same variable is generated at some point in the past. The forecast errors are then calculated to find the RMSE of the two methods. In the top 10 countries by total number of cases, the "augmented forecast" outperforms the simple forecast on the cumulative variable. 
+
+The performance of the augmented forecast against the cumulative forecast is done with the following parameters: 
+
+Locations: 
+* Iran 
+* Colombia 
+* Chile 
+* Peru 
+* Mexico 
+* South Africa 
+* Russia 
+* India 
+* Brazil 
+* United States
+
+Forecast horizon: 10 days
+Forecast start: "2020-07-01"
+Forecast variable: Total cases
+
+**Legend**:
+
+* red: cumulative forecast
+
+* blue: augmented forecast
+
+* shaded blue: augmented forecast 95% confidence interval
+
+### ARIMA: 
+In some cases, the daily forecast ARIMA parameters are similar to the cumulative forecast parameters, and the augmented forecast shows little improvement. 
+
+The mean % change in RMSE was found to be -25.0%.
+![arima_errors](https://github.com/johnfmaner/covid19/blob/master/diagnostics/arima_error.png)
+![arima errors distribution](https://github.com/johnfmaner/covid19/blob/master/diagnostics/arima_error_kde.png)
+
+### ETS
+The mean % change in RMSE was found to be -16.9%.  
+![ets_errors](https://github.com/johnfmaner/covid19/blob/master/diagnostics/ets_error.png)
+![ets errors distribution](https://github.com/johnfmaner/covid19/blob/master/diagnostics/ets_error_kde.png)
+
+### TBATS
+The mean % change in RMSE was found to be -26.4%. 
+![tbats_errors](https://github.com/johnfmaner/covid19/blob/master/diagnostics/tbats_error.png)
+![tbats_errors distribution](https://github.com/johnfmaner/covid19/blob/master/diagnostics/tbats_error_kde.png)
