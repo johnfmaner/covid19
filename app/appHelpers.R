@@ -8,12 +8,12 @@ library(shinythemes) #prettier
 
 options(shiny.reactlog = TRUE)
 #dataIn <- read.csv("~/Documents/projects/covid19/data/owid-covid.csv") #only for local development use
-owid.url <- "https://covid.ourworldindata.org/data/owid-covid-data.csv"
-dataIn <- as.data.frame(read.csv(owid.url)) #load owid-covid data directly from github repository 
-dataIn <- dataIn[(year(dataIn$date) == 2019) == FALSE,] #remove 2019 dates. this should be handled better in future projects! 
+owid.url <- "https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv?raw=true"
+dataIn <- read.csv(owid.url) #load owid-covid data directly from github repository  
+
 
 #DATA -----------------------------------------------------------
-myLocations <- source("myLocations.R")$value
+myLocations <- source("myLocations.R")
 
 #available variables and names 
 myVars<- c("total_cases","new_cases","total_deaths","new_deaths",
@@ -79,28 +79,29 @@ find.start<- function(source, var) {
   "
   
   for (val in seq(1:length(source[[var]]))) {
-    default <-as.Date("2020-01-01") #default start value 
+    default <-  ymd("2020-01-01") #default start value 
     start.val<- default 
-    if (source[[var]][val] > 0 & is.na(source[[var]][val]) == FALSE) {
-      start.val <- source[["date"]][val]
-      break
+    if (source[[var]][val] != 0 & is.na(source[[var]][val]) == FALSE) {
+      start.val <- ymd(source[["date"]][val])
+      return(start.val)
+      break 
     } 
   }
   #check if start.val occurs before Jan1 to avoid first value being 365
 
-     if (year(start.val) == "2019") {
-      print("Defaulted to 2020-01-01 because start did not occur in 2020")
-      return(default)
-   } else {
-     return(as.Date(start.val))
-  }
+  #   if (year(start.val) != "2019") {
+  #   print("Defaulted to 2020-01-01 because start did not occur in 2020")
+  #   return(default)
+  # } else {
+  #   return(start.val)
+  # }
 }
 
 recent.date <- function(source) {
   "RETURNS: (, int) returns most recent (assuming the last) date in owid-covid data
   (source, named list) owid-covid raw data"
   
-  return(as.Date(max(source$date, na.rm = TRUE)))
+  return(max(source$date))
 }
 
 var.name <- function(var) {
@@ -136,38 +137,35 @@ new2total <- function(new) {
 }
 
 forecast.errors <- function(source, forecast) {
-  "RETURNS: (, ts) Ts of errors for a forecast mean against OBSERVED data
-  (source, list) univariate timeseries from myTimeseries including data from find.start to recent.date
-  (forecast, list) timeseries of mean value forecast from myForecast
+  "RETURNS: (, ts) Ts of residuals for a forecast mean against OBSERVED data
+  (source, list) univariate timeseries from myTimeseries
+  (forecast, list) mean timeseries forecast from myForecast
   "
   
   fore.start <- start(forecast)[1]
   fore.end <- end(forecast)[1]
   ts.start <- start(source)[1]
   
-  error <- c()
+  resid <- c()
   for (i in seq(fore.start, fore.end)) {
-    error[i+1-fore.start] <- source[i + 1 - ts.start] - forecast[i + 1 - fore.start]
+    resid[i+1-fore.start] <- source[i + 1 - ts.start] - forecast[i + 1 - fore.start]
   }
-  return(ts(error, start=fore.start, end=fore.end))
+  return(ts(resid, start=fore.start, end=fore.end))
 }
 
-
-forecast.rmse <- function(source, forecast) {
-  "RETURNS: (, ts) Ts of errors for a forecast mean against OBSERVED data
-  (source, list) univariate timeseries from myTimeseries including data from find.start to recent.date
-  (forecast, list) timeseries forecast from myForecast
+sum.sq <- function(source) {
+  "RETURNS (, float) sum of squares of a univariate list 
+  (source, list) univariate list of numbers 
   "
   
-  fore.start <- start(forecast)[1]
-  fore.end <- end(forecast)[1]
-  ts.start <- start(source)[1]
+  return(sum(source * source))
+}
+
+root.mean.sq <- function(source) {
+  "RETURNS (, float) mean square of a univariate list
+  (source, list) univariate list of numbers"
   
-  error.sq <- c()
-  for (i in seq(fore.start, fore.end)) {
-    error.sq[i+1-fore.start] <- (source[i + 1 - ts.start] - forecast[i + 1 - fore.start])^2
-  }
-  return(sqrt(mean(error.sq)))  
+  return(sqrt(mean(source*source)))
 }
 
 myCountry <- function(source, loc) {
@@ -177,14 +175,26 @@ myCountry <- function(source, loc) {
   (loc, string), country name/location
   "
   
-  return(as.data.frame(filter(source, source['location'] == loc)))
+  return(subset(source, source$location == loc))
+}
+
+myContinent <- function(source, loc) {
+  #TODO: aggregate values for each data for each country 
+  
+  "
+  RETURNS: (,named list) Subset of input data (source) filtered by continent
+  (source, data.frame) input owid-covid data.frame
+  (loc, string), continent name
+  "
+  
 }
 
 myTimeseries <- function(source, var, stop) {
   "
-  RETURNS: (,ts) Time series data of source$var fromstop 
+  RETURNS: (,ts) Time series data of source$var from start:stop 
   (source, named list) input OWID covid data frame ideally input from myCountry or myContinent
   (var, string) variable to create time series of
+  (start, date) ymd('YYYY-MM-DD)' lubridate object for starting point of time series
   (stop, date) ymd('YYYY-MM-DD') lubrdiate object for stopping point of time series
   "
   start.date <- find.start(source,var)
@@ -192,16 +202,17 @@ myTimeseries <- function(source, var, stop) {
   end.day <- date.day(stop)
   
   if (start.day > end.day) {
-    message <- paste("Error:",stop,"occurs before first possible day for this country's data:",start.date,sep='')
+    message <- paste("Error:",start,"occured before",stop,sep=" ")
     stop(message)
   }
-
-  temp0 <- subset(source[var], source$date <= stop & source$date >= start.date)
-  temp <- ts(temp0, start=date.day(start.date))
+  ts.out <- ts(subset(source[var],
+                      date.day(source$date) <= end.day & 
+                      date.day(source$date) >= start.day), 
+            start=start.day)#, 
+            #end=end.day)
+  ts.out[ts.out<0] <- 0 #assign negative numbers to 0
   
-  temp[temp<0] <- 0 #assign negative numbers to 0
-  
-  return(na.contiguous(temp)) #longest continous range of continuous data 
+  return(na.contiguous(ts.out))
 }
 
 myForecast <- function(source, type, predInt) {
@@ -236,7 +247,7 @@ myAugmentedforecast <- function(dailyforecast, totalsource) {
                   start=total.end, 
                   end=total.end + pred.int)        
   
-  aug.lower <- ts(pred.start, 
+  aug.lower <- ts(pred.start,
                   start=total.end, 
                   end=total.end + pred.int)  
   
@@ -245,7 +256,11 @@ myAugmentedforecast <- function(dailyforecast, totalsource) {
     aug.upper[i+1] <- aug.mean[i] + (dailyforecast[["upper"]][i] + dailyforecast[["mean"]][i])
     aug.lower[i+1] <- aug.mean[i] - (dailyforecast[["mean"]][i] - dailyforecast[["lower"]][i])
   }
-  return(list(mean=aug.mean, upper=aug.upper, lower=aug.lower, method=dailyforecast$method)) 
+  
+  return(list(mean=aug.mean, 
+              upper=aug.upper, 
+              lower=aug.lower,
+              method=dailyforecast['method'])) 
 }
 
 myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
@@ -277,7 +292,7 @@ myForecast.plot <- function(source, loc, ts.var, ts.end, fore.type, pred.int) {
        ylab=var.name(ts.var),
        xlab=NA,
        type='h',
-       lwd=3,
+       lwd=5,
        las=1,
        xlim=c(start(data0)[1], date.day(ts.end) + pred.int),
        ylim=c(0, max(conf.y, replace(data0, is.na(data0), 0)))

@@ -2,7 +2,7 @@
 source("appHelpers.R")
 options(scipen=999) #(try to) disable scientific notation for prettier plots
 recent <- recent.date(dataIn)
-
+# 
 # Define UI
 ui <- fluidPage(theme = shinytheme("paper"),
                 navbarPage("COVID-19 Forecasting", 
@@ -24,7 +24,7 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                                 max=recent),
                                       selectInput("ts.var", "Variable", myVars,selected="total_cases",multiple=FALSE),
                                       selectInput("fore.type", "Forecast Model", myFuns,multiple=FALSE),
-                                      sliderInput("pred.int", "Prediction Interval", min=1,max=30,value=21),
+                                      sliderInput("pred.int", "Forecast Horizon", min=1,max=30,value=21),
                                       
                                       width=3), # sidebarPanel
                                     mainPanel(
@@ -53,7 +53,7 @@ ui <- fluidPage(theme = shinytheme("paper"),
                                                      max=recent),
                                        selectInput("aug.ts.var", "Variable", myVars.new,selected="new_cases",multiple=FALSE),
                                        selectInput("aug.fore.type", "Forecast Model", myFuns, multiple=FALSE),
-                                       sliderInput("aug.pred.int", "Prediction Interval", min=1,max=30,value=21),
+                                       sliderInput("aug.pred.int", "Forecast Horizon", min=1,max=30,value=21),
 
                                     width=3), # sidebarPanel
                                     mainPanel(
@@ -204,4 +204,22 @@ server <- function(input, output, session) {
 
 # Create Shiny object
 shinyApp(ui = ui, server = server)
+# 
+# test <- myTimeseries(myCountry(dataIn, "Brazil"), "total_cases", day.date(174))
+# fcast<- myForecast(test, "auto.arima", 30)
+# date.day(day.date(date.day(recent) - 30))
+# xp<- c(seq(174 + 1, 174 + 30), seq(174 + 30, 174+1))
+# yp<- c(fcast$upper, rev(fcast$lower))
+# 
+# length(xp)
+# length(yp)
+# 
+# plot(fcast$mean,xlim=c(170,210),ylim=c(1000000,3000000))
+# polygon(xp,yp,col='#AFD9FF',border=NA)
+# lines(fcast$mean, lty=2)
+# lines(myTimeseries(myCountry(dataIn, "Brazil"), "total_cases", recent),type='h')
+# 
+#       
+
+# myAugmentedforecast.plot(dataIn, "Brazil", "new_cases", recent, "auto.arima", 30)
 
